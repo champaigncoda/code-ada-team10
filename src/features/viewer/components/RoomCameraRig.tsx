@@ -18,7 +18,17 @@ export function RoomCameraRig({ extent, resetToken, enabled = true }: RoomCamera
   const camera = useThree((state) => state.camera)
   const aspect = useThree((state) => state.size.width / Math.max(state.size.height, 1))
   const controlsRef = useRef<OrbitControlsImpl | null>(null)
-  const view = useMemo(() => computeInitialCameraView(extent, aspect, VIEWER_FOV_DEGREES), [extent, aspect])
+  const { width, depth, height } = extent
+  // Depend on the measurements, not the extent object. Furniture updates pass a
+  // new object every render; treating that as a new room was snapping the camera.
+  const view = useMemo(
+    () => computeInitialCameraView({ width, depth, height }, aspect, VIEWER_FOV_DEGREES),
+    [width, depth, height, aspect],
+  )
+  const orbitTarget = useMemo(
+    () => [view.target.x, view.target.y, view.target.z] as [number, number, number],
+    [view.target.x, view.target.y, view.target.z],
+  )
 
   useLayoutEffect(() => {
     applyCameraView(camera as PerspectiveCamera, controlsRef.current, view)
@@ -34,7 +44,7 @@ export function RoomCameraRig({ extent, resetToken, enabled = true }: RoomCamera
       enableRotate={enabled}
       minDistance={view.minDistance}
       maxDistance={view.maxDistance}
-      target={[view.target.x, view.target.y, view.target.z]}
+      target={orbitTarget}
     />
   )
 }
