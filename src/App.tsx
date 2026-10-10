@@ -1,5 +1,5 @@
 import './App.css'
-import { EditorPlaceholder } from './features/editor/EditorPlaceholder'
+import { FloorPlanEditor } from './features/editor/FloorPlanEditor'
 
 function App() {
   return (
@@ -8,7 +8,7 @@ function App() {
         <h1>Room Designer</h1>
       </header>
       <main className="app-main">
-        <EditorPlaceholder />
+        <FloorPlanEditor />
       </main>
     </div>
   )

@@ -4,7 +4,16 @@
   --color-border: #cfd4dc;
   --color-text: #1d2330;
   --color-text-muted: #6b7385;
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-success: #15803d;
+  --color-success-bg: #dcfce7;
+  --color-info-bg: #dbeafe;
+  --color-danger: #b91c1c;
+  --color-danger-bg: #fef2f2;
+  --color-danger-border: #fecaca;
   --radius: 12px;
+  --radius-small: 8px;
 
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.5;
@@ -21,4 +30,52 @@
 
 body {
   margin: 0;
+}
+
+.button {
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  padding: 0.5rem 0.875rem;
+  border-radius: var(--radius-small);
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.button--primary {
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+.button--primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.button--secondary {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.button--secondary:hover:not(:disabled) {
+  background: var(--color-bg);
+}
+
+.button--small {
+  padding: 0.25rem 0.625rem;
+  font-size: 0.8125rem;
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
 }
