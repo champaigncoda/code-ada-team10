@@ -179,6 +179,47 @@ describe('furniture editing and management', () => {
   })
 })
 
+describe('transform editing', () => {
+  it('moves and rotates only the targeted instance and keeps the other still', () => {
+    const session = apply(placed('sofa-1'), {
+      type: 'furnitureCreateStarted',
+    }, {
+      type: 'furniturePlacementStarted',
+    }, {
+      type: 'furniturePlacementAttempted',
+      position: { x: 2, z: 0 },
+      inside: true,
+      id: 'sofa-2',
+    })
+    const moved = apply(session, { type: 'furnitureMoved', id: 'sofa-2', x: -0.5, z: 1.25 })
+    expect(moved.instances[0]?.position).toEqual({ x: 0.25, z: -0.4 })
+    expect(moved.instances[1]?.position).toEqual({ x: -0.5, z: 1.25 })
+    expect(moved.instances[1]?.rotationY).toBe(0)
+    if (moved.mode.kind !== 'edit') throw new Error('expected edit mode')
+    expect(moved.mode.transform.xInput).toBe('-0.5')
+    expect(moved.mode.transform.zInput).toBe('1.25')
+
+    const turned = apply(moved, { type: 'furnitureRotationShortcut', degrees: 270 })
+    expect(turned.instances[1]?.rotationY).toBeCloseTo((270 * Math.PI) / 180)
+    expect(turned.instances[0]?.rotationY).toBe(0)
+    expect(turned.instances[1]?.position).toEqual({ x: -0.5, z: 1.25 })
+    if (turned.mode.kind !== 'edit') throw new Error('expected edit mode')
+    expect(turned.mode.transform.rotationInput).toBe('270')
+  })
+
+  it('keeps the last position while a coordinate is incomplete, then applies a valid one', () => {
+    const session = placed('sofa-1')
+    const incomplete = apply(session, { type: 'furniturePositionDraftChanged', axis: 'x', input: '-' })
+    expect(incomplete.instances[0]?.position.x).toBe(0.25)
+    const shifted = apply(incomplete, { type: 'furniturePositionDraftChanged', axis: 'x', input: '-1.5' })
+    expect(shifted.instances[0]?.position).toEqual({ x: -1.5, z: -0.4 })
+    const bad = apply(shifted, { type: 'furnitureRotationDraftChanged', input: 'nope' })
+    expect(bad.instances[0]?.rotationY).toBe(0)
+    if (bad.mode.kind !== 'edit') throw new Error('expected edit mode')
+    expect(bad.mode.transform.rotationInput).toBe('nope')
+  })
+})
+
 function selectedId(session: FurnitureSession): string | null {
   return session.mode.kind === 'edit' ? session.mode.selectedId : null
 }

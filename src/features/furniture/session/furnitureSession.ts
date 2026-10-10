@@ -10,6 +10,12 @@ import {
   type FurnitureDraft,
 } from '../furnitureConfig'
 import { buildFurnitureLayout } from '../layout/buildFurnitureLayout'
+import {
+  degreesToRadians,
+  formatCoordinate,
+  formatDegrees,
+  parseSignedDecimal,
+} from '../interaction/transformMath'
 
 /**
  * Furniture belongs to the confirmed outline and scale, not to the wall height.
@@ -24,11 +30,22 @@ export const FURNITURE_DUPLICATE_OFFSET_X = 0.5
 
 export const PLACEMENT_INSTRUCTION = 'Move over the floor and click to place. Press Esc to cancel.'
 
+export interface TransformDraft {
+  readonly xInput: string
+  readonly zInput: string
+  readonly rotationInput: string
+}
+
 export type FurnitureMode =
   | { readonly kind: 'default' }
   | { readonly kind: 'create'; readonly draft: FurnitureDraft }
   | { readonly kind: 'placement'; readonly draft: FurnitureDraft; readonly preview: FloorPoint | null }
-  | { readonly kind: 'edit'; readonly selectedId: string; readonly draft: FurnitureDraft }
+  | {
+      readonly kind: 'edit'
+      readonly selectedId: string
+      readonly draft: FurnitureDraft
+      readonly transform: TransformDraft
+    }
 
 export interface FurnitureSession {
   readonly instances: readonly FurnitureInstance[]
@@ -54,6 +71,11 @@ export type FurnitureSessionAction =
   | { readonly type: 'furnitureDeselected' }
   | { readonly type: 'furnitureDuplicated'; readonly id: string }
   | { readonly type: 'furnitureDeleted' }
+  | { readonly type: 'furnitureMoved'; readonly id: string; readonly x: number; readonly z: number }
+  | { readonly type: 'furnitureRotated'; readonly id: string; readonly rotationY: number }
+  | { readonly type: 'furniturePositionDraftChanged'; readonly axis: 'x' | 'z'; readonly input: string }
+  | { readonly type: 'furnitureRotationDraftChanged'; readonly input: string }
+  | { readonly type: 'furnitureRotationShortcut'; readonly degrees: number }
 
 const FURNITURE_ACTION_TYPES: ReadonlySet<FurnitureSessionAction['type']> = new Set([
   'furnitureCreateStarted',
@@ -69,6 +91,11 @@ const FURNITURE_ACTION_TYPES: ReadonlySet<FurnitureSessionAction['type']> = new 
   'furnitureDeselected',
   'furnitureDuplicated',
   'furnitureDeleted',
+  'furnitureMoved',
+  'furnitureRotated',
+  'furniturePositionDraftChanged',
+  'furnitureRotationDraftChanged',
+  'furnitureRotationShortcut',
 ])
 
 export function isFurnitureSessionAction(action: { readonly type: string }): action is FurnitureSessionAction {
@@ -95,6 +122,28 @@ export function furnitureDisplayName(instances: readonly FurnitureInstance[], id
   if (!item) return ''
   const index = instances.filter((instance) => instance.category === item.category).findIndex((instance) => instance.id === id)
   return `${FURNITURE_CATEGORY_LABELS[item.category]} ${index + 1}`
+}
+
+export function transformFromInstance(instance: FurnitureInstance): TransformDraft {
+  return {
+    xInput: formatCoordinate(instance.position.x),
+    zInput: formatCoordinate(instance.position.z),
+    rotationInput: formatDegrees(instance.rotationY),
+  }
+}
+
+/** The arc is only shown while one placed item is being edited. */
+export function rotationHandleVisible(mode: FurnitureMode): boolean {
+  return mode.kind === 'edit'
+}
+
+function editMode(instance: FurnitureInstance): FurnitureMode {
+  return {
+    kind: 'edit',
+    selectedId: instance.id,
+    draft: draftFromInstance(instance),
+    transform: transformFromInstance(instance),
+  }
 }
 
 export function draftFromInstance(instance: FurnitureInstance): FurnitureDraft {
@@ -206,7 +255,7 @@ export function reduceFurnitureSession(session: FurnitureSession, action: Furnit
       }
       return {
         instances: [...session.instances, instance],
-        mode: { kind: 'edit', selectedId: instance.id, draft: draftFromInstance(instance) },
+        mode: editMode(instance),
       }
     }
     case 'furniturePlacementCancelled':
@@ -216,7 +265,7 @@ export function reduceFurnitureSession(session: FurnitureSession, action: Furnit
       if (session.mode.kind === 'edit' && session.mode.selectedId === action.id) return session
       const instance = session.instances.find((item) => item.id === action.id)
       if (!instance) return session
-      return { ...session, mode: { kind: 'edit', selectedId: instance.id, draft: draftFromInstance(instance) } }
+      return { ...session, mode: editMode(instance) }
     }
     case 'furnitureDeselected':
       if (session.mode.kind !== 'edit') return session
@@ -236,7 +285,7 @@ export function reduceFurnitureSession(session: FurnitureSession, action: Furnit
       }
       return {
         instances: [...session.instances, copy],
-        mode: { kind: 'edit', selectedId: copy.id, draft: draftFromInstance(copy) },
+        mode: editMode(copy),
       }
     }
     case 'furnitureDeleted': {
@@ -247,5 +296,77 @@ export function reduceFurnitureSession(session: FurnitureSession, action: Furnit
         mode: { kind: 'default' },
       }
     }
+    case 'furnitureMoved':
+      return commitTransform(session, action.id, { x: action.x, z: action.z })
+    case 'furnitureRotated':
+      return commitTransform(session, action.id, { rotationY: action.rotationY })
+    case 'furniturePositionDraftChanged':
+      return changePositionDraft(session, action.axis, action.input)
+    case 'furnitureRotationDraftChanged':
+      return changeRotationDraft(session, action.input)
+    case 'furnitureRotationShortcut':
+      return commitTransform(session, selectedIdOf(session), { rotationY: degreesToRadians(action.degrees) })
   }
+}
+
+function selectedIdOf(session: FurnitureSession): string | null {
+  return session.mode.kind === 'edit' ? session.mode.selectedId : null
+}
+
+function commitTransform(
+  session: FurnitureSession,
+  id: string | null,
+  patch: { readonly x?: number; readonly z?: number; readonly rotationY?: number },
+): FurnitureSession {
+  if (!id || !session.instances.some((instance) => instance.id === id)) return session
+  if (patch.x !== undefined && !Number.isFinite(patch.x)) return session
+  if (patch.z !== undefined && !Number.isFinite(patch.z)) return session
+  if (patch.rotationY !== undefined && !Number.isFinite(patch.rotationY)) return session
+  const instances = session.instances.map((instance) => {
+    if (instance.id !== id) return instance
+    const next = {
+      ...instance,
+      position: { x: patch.x ?? instance.position.x, z: patch.z ?? instance.position.z },
+      rotationY: patch.rotationY ?? instance.rotationY,
+    }
+    if (
+      next.position.x === instance.position.x &&
+      next.position.z === instance.position.z &&
+      next.rotationY === instance.rotationY
+    ) {
+      return instance
+    }
+    return next
+  })
+  const { mode } = session
+  if (mode.kind !== 'edit' || mode.selectedId !== id) return { ...session, instances }
+  const updated = instances.find((instance) => instance.id === id)
+  if (!updated) return { ...session, instances }
+  return { instances, mode: { ...mode, transform: transformFromInstance(updated) } }
+}
+
+function changePositionDraft(session: FurnitureSession, axis: 'x' | 'z', input: string): FurnitureSession {
+  const { mode } = session
+  if (mode.kind !== 'edit') return session
+  const transform = axis === 'x' ? { ...mode.transform, xInput: input } : { ...mode.transform, zInput: input }
+  const parsed = parseSignedDecimal(input)
+  if (!parsed.ok) return { ...session, mode: { ...mode, transform } }
+  const patch = axis === 'x' ? { x: parsed.value } : { z: parsed.value }
+  const next = commitTransform({ ...session, mode: { ...mode, transform } }, mode.selectedId, patch)
+  // Keep the typed text. commitTransform rewrites both fields from the instance.
+  return next.mode.kind === 'edit' ? { ...next, mode: { ...next.mode, transform } } : next
+}
+
+function changeRotationDraft(session: FurnitureSession, input: string): FurnitureSession {
+  const { mode } = session
+  if (mode.kind !== 'edit') return session
+  const transform = { ...mode.transform, rotationInput: input }
+  const parsed = parseSignedDecimal(input)
+  if (!parsed.ok) return { ...session, mode: { ...mode, transform } }
+  const next = commitTransform(
+    { ...session, mode: { ...mode, transform } },
+    mode.selectedId,
+    { rotationY: degreesToRadians(parsed.value) },
+  )
+  return next.mode.kind === 'edit' ? { ...next, mode: { ...next.mode, transform } } : next
 }

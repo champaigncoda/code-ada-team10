@@ -1,0 +1,215 @@
+import { useThree } from '@react-three/fiber'
+import { useEffect, useRef } from 'react'
+import type { Object3D } from 'three'
+import { Raycaster, Vector2 } from 'three'
+import type { FurnitureInstance } from '../../../types/furniture'
+import {
+  advanceDrag,
+  advanceRotate,
+  beginDrag,
+  beginRotate,
+  classifyPointerDown,
+  type DragGesture,
+  type RotateGesture,
+} from '../../furniture/interaction/transformMath'
+import { rayHitFloorY0 } from '../../furniture/placement/floorPlacement'
+
+interface FurnitureGestureControllerProps {
+  readonly placing: boolean
+  readonly instances: readonly FurnitureInstance[]
+  readonly onSelect: (id: string) => void
+  readonly onMove: (id: string, x: number, z: number) => void
+  readonly onRotate: (id: string, rotationY: number) => void
+}
+
+type LiveGesture =
+  | { readonly kind: 'drag'; readonly pointerId: number; readonly drag: DragGesture }
+  | { readonly kind: 'rotate'; readonly pointerId: number; readonly rotate: RotateGesture; readonly centerX: number; readonly centerZ: number }
+
+/**
+ * Capture-phase pointer ownership. A primary press on furniture stops the event
+ * before OrbitControls can start a camera gesture.
+ */
+export function FurnitureGestureController({
+  placing,
+  instances,
+  onSelect,
+  onMove,
+  onRotate,
+}: FurnitureGestureControllerProps) {
+  const camera = useThree((state) => state.camera)
+  const gl = useThree((state) => state.gl)
+  const scene = useThree((state) => state.scene)
+  const controls = useThree((state) => state.controls)
+  const placingRef = useRef(placing)
+  const instancesRef = useRef(instances)
+  const selectRef = useRef(onSelect)
+  const moveRef = useRef(onMove)
+  const rotateRef = useRef(onRotate)
+
+  useEffect(() => {
+    placingRef.current = placing
+    instancesRef.current = instances
+    selectRef.current = onSelect
+    moveRef.current = onMove
+    rotateRef.current = onRotate
+  })
+
+  useEffect(() => {
+    const element = gl.domElement
+    const raycaster = new Raycaster()
+    const pointer = new Vector2()
+    let gesture: LiveGesture | null = null
+
+    const restoreOrbit = () => {
+      const orbit = controls as { enabled?: boolean } | null
+      if (orbit && !placingRef.current) orbit.enabled = true
+    }
+    const lockOrbit = () => {
+      const orbit = controls as { enabled?: boolean } | null
+      if (orbit) orbit.enabled = false
+    }
+    const releaseCapture = (pointerId: number) => {
+      try {
+        if (element.hasPointerCapture(pointerId)) element.releasePointerCapture(pointerId)
+      } catch {
+        // Already released.
+      }
+    }
+    const floorHit = (event: PointerEvent) => {
+      const rect = element.getBoundingClientRect()
+      if (rect.width <= 0 || rect.height <= 0) return null
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+      raycaster.setFromCamera(pointer, camera)
+      const { origin, direction } = raycaster.ray
+      return rayHitFloorY0(
+        { x: origin.x, y: origin.y, z: origin.z },
+        { x: direction.x, y: direction.y, z: direction.z },
+      )
+    }
+    const targetOf = (event: PointerEvent): 'rotate' | 'body' | 'empty' => {
+      const rect = element.getBoundingClientRect()
+      if (rect.width <= 0 || rect.height <= 0) return 'empty'
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+      raycaster.setFromCamera(pointer, camera)
+      const hits = raycaster.intersectObjects(scene.children, true)
+      for (const hit of hits) {
+        let object: Object3D | null = hit.object
+        while (object) {
+          const part = object.userData.furniturePart
+          if (part === 'rotate' || part === 'body') return part
+          object = object.parent
+        }
+      }
+      return 'empty'
+    }
+    const finish = (pointerId: number | null) => {
+      if (pointerId !== null) releaseCapture(pointerId)
+      gesture = null
+      restoreOrbit()
+    }
+
+    const onDown = (event: PointerEvent) => {
+      if (placingRef.current) return
+      const claim = classifyPointerDown({ button: event.button, placing: false, target: targetOf(event) })
+      if (claim !== 'drag' && claim !== 'rotate') return
+      const id = idFromRay(event)
+      const instance = instancesRef.current.find((item) => item.id === id)
+      const hit = floorHit(event)
+      if (!instance || !hit || !id) return
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      try {
+        element.setPointerCapture(event.pointerId)
+      } catch {
+        // Capture is unavailable for some synthetic events. The canvas listeners still run.
+      }
+      lockOrbit()
+      selectRef.current(instance.id)
+      if (claim === 'rotate') {
+        gesture = {
+          kind: 'rotate',
+          pointerId: event.pointerId,
+          centerX: instance.position.x,
+          centerZ: instance.position.z,
+          rotate: beginRotate(instance.id, event.clientX, event.clientY, instance.rotationY, instance.position, hit),
+        }
+      } else {
+        gesture = {
+          kind: 'drag',
+          pointerId: event.pointerId,
+          drag: beginDrag(instance.id, event.clientX, event.clientY, instance.position, hit),
+        }
+      }
+    }
+    const idFromRay = (event: PointerEvent): string | null => {
+      const rect = element.getBoundingClientRect()
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+      raycaster.setFromCamera(pointer, camera)
+      const hits = raycaster.intersectObjects(scene.children, true)
+      for (const hit of hits) {
+        let object: Object3D | null = hit.object
+        while (object) {
+          const furnitureId = object.userData.furnitureId
+          if (typeof furnitureId === 'string') return furnitureId
+          object = object.parent
+        }
+      }
+      return null
+    }
+    const onMove = (event: PointerEvent) => {
+      if (!gesture || gesture.pointerId !== event.pointerId) return
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      lockOrbit()
+      const hit = floorHit(event)
+      if (gesture.kind === 'drag') {
+        const next = advanceDrag(gesture.drag, event.clientX, event.clientY, hit)
+        gesture = { ...gesture, drag: next }
+        if (next.active && instancesRef.current.some((item) => item.id === next.id)) {
+          moveRef.current(next.id, next.position.x, next.position.z)
+        }
+      } else {
+        const current = gesture
+        if (!instancesRef.current.some((item) => item.id === current.rotate.id)) {
+          finish(event.pointerId)
+          return
+        }
+        const next = advanceRotate(
+          current.rotate,
+          event.clientX,
+          event.clientY,
+          { x: current.centerX, z: current.centerZ },
+          hit,
+        )
+        gesture = { kind: 'rotate', pointerId: current.pointerId, centerX: current.centerX, centerZ: current.centerZ, rotate: next }
+        if (next.active) rotateRef.current(next.id, next.rotationY)
+      }
+    }
+    const onUp = (event: PointerEvent) => {
+      if (!gesture || gesture.pointerId !== event.pointerId) return
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      finish(event.pointerId)
+    }
+
+    element.addEventListener('pointerdown', onDown, true)
+    element.addEventListener('pointermove', onMove, true)
+    element.addEventListener('pointerup', onUp, true)
+    element.addEventListener('pointercancel', onUp, true)
+    return () => {
+      element.removeEventListener('pointerdown', onDown, true)
+      element.removeEventListener('pointermove', onMove, true)
+      element.removeEventListener('pointerup', onUp, true)
+      element.removeEventListener('pointercancel', onUp, true)
+      if (gesture) releaseCapture(gesture.pointerId)
+      gesture = null
+      restoreOrbit()
+    }
+  }, [camera, controls, gl, scene])
+
+  return null
+}

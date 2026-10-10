@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyCameraView, computeInitialCameraView, type CameraView, type ViewCamera } from './cameraView'
+import { applyCameraView, computeInitialCameraView, computeTopDownCameraView, type CameraView, type ViewCamera } from './cameraView'
 
 function isFinitePoint(point: { x: number; y: number; z: number }): boolean {
   return Number.isFinite(point.x) && Number.isFinite(point.y) && Number.isFinite(point.z)
@@ -71,6 +71,15 @@ describe('camera framing', () => {
     expect(controls.updated).toBe(true)
     expect(snapshot.position).toEqual(initial.position)
     expect(snapshot.target).toEqual(initial.target)
+  })
+
+  it('frames a top-down view around the room bounds with margin on both axes', () => {
+    const view = computeTopDownCameraView({ minX: 10, maxX: 14, minZ: -5, maxZ: -1 }, 1, 90)
+    expect(view.target).toEqual({ x: 12, y: 0, z: -3 })
+    expect(view.position.x).toBe(12)
+    expect(view.position.z).toBe(-3)
+    expect(view.position.y).toBeCloseTo(2 / 0.7, 5)
+    expect(view.position.y).toBeGreaterThan(0)
   })
 })
 

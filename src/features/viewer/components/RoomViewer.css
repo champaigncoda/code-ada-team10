@@ -172,6 +172,27 @@
   gap: 0.5rem;
 }
 
+.furniture-transform {
+  margin: 0;
+  padding: 0;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.furniture-transform legend {
+  padding: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.furniture-transform__shortcuts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
 .furniture-details__preview {
   display: flex;
   flex-direction: column;

@@ -9,6 +9,8 @@ interface FurnitureModelProps {
   readonly highlighted?: boolean
   /** Placement ghost. Excluded from pointer hit testing. */
   readonly ghost?: boolean
+  /** Placed models ignore hits while a new item is being placed. */
+  readonly interactive?: boolean
 }
 
 function ignoreRaycast(): void {}
@@ -18,11 +20,13 @@ function PartMesh({
   color,
   highlighted = false,
   ghost = false,
+  interactive = true,
 }: {
   readonly part: FurniturePart
   readonly color: string
   readonly highlighted?: boolean
   readonly ghost?: boolean
+  readonly interactive?: boolean
 }) {
   const roughness = part.role === 'accent' ? 0.82 : part.role === 'secondary' ? 0.7 : 0.58
   return (
@@ -34,7 +38,7 @@ function PartMesh({
       position={[part.center.x, part.center.y, part.center.z]}
       castShadow={!ghost}
       receiveShadow={!ghost}
-      raycast={ghost ? ignoreRaycast : undefined}
+      raycast={ghost || !interactive ? ignoreRaycast : undefined}
     >
       <meshStandardMaterial
         color={color}
@@ -51,7 +55,13 @@ function PartMesh({
 }
 
 /** Renders a layout. Color never affects part sizes — only materials. */
-export function FurnitureModel({ layout, color, highlighted = false, ghost = false }: FurnitureModelProps) {
+export function FurnitureModel({
+  layout,
+  color,
+  highlighted = false,
+  ghost = false,
+  interactive = true,
+}: FurnitureModelProps) {
   const palette = furniturePalette(color)
   return (
     <group name={`furniture-${layout.category}`}>
@@ -62,6 +72,7 @@ export function FurnitureModel({ layout, color, highlighted = false, ghost = fal
           color={colorForRole(palette, part.role)}
           highlighted={highlighted}
           ghost={ghost}
+          interactive={interactive}
         />
       ))}
     </group>
