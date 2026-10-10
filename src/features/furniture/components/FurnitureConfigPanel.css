@@ -1,0 +1,118 @@
+.furniture-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.furniture-panel__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.furniture-categories {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.375rem;
+}
+
+.furniture-category {
+  padding: 0.45rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.furniture-category--selected {
+  border-color: var(--color-primary);
+  background: var(--color-info-bg);
+  color: var(--color-primary);
+}
+
+.furniture-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.furniture-field__label {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.furniture-field__message {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.furniture-field__message--error {
+  color: var(--color-danger);
+}
+
+.furniture-colors {
+  margin: 0;
+  padding: 0;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.furniture-colors legend {
+  padding: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.furniture-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.furniture-swatch {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  border: 2px solid var(--color-border);
+  cursor: pointer;
+  padding: 0;
+}
+
+.furniture-swatch--selected {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-color: #ffffff;
+}
+
+.furniture-custom-color {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.furniture-custom-color input[type='color'] {
+  width: 2rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.furniture-custom-color__value {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}

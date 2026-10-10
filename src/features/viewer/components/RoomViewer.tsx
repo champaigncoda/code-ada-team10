@@ -12,9 +12,10 @@ import './RoomViewer.css'
 interface RoomViewerProps {
   readonly source: RoomModelSource
   readonly onReturnToEditor: () => void
+  readonly onOpenFurniture?: () => void
 }
 
-export function RoomViewer({ source, onReturnToEditor }: RoomViewerProps) {
+export function RoomViewer({ source, onReturnToEditor, onOpenFurniture }: RoomViewerProps) {
   const [showWalls, setShowWalls] = useState(true)
   const [resetToken, setResetToken] = useState(0)
   const geometry = useMemo(() => buildRoomGeometry(source), [source])
@@ -27,6 +28,7 @@ export function RoomViewer({ source, onReturnToEditor }: RoomViewerProps) {
           onToggleWalls={() => setShowWalls((visible) => !visible)}
           onResetCamera={() => setResetToken((token) => token + 1)}
           onReturnToEditor={onReturnToEditor}
+          onOpenFurniture={onOpenFurniture}
         />
         <p className="room-viewer__error" role="alert">
           The 3D room could not be built from the current outline and measurements.
@@ -43,6 +45,7 @@ export function RoomViewer({ source, onReturnToEditor }: RoomViewerProps) {
         onToggleWalls={() => setShowWalls((visible) => !visible)}
         onResetCamera={() => setResetToken((token) => token + 1)}
         onReturnToEditor={onReturnToEditor}
+        onOpenFurniture={onOpenFurniture}
       />
       <p className="room-viewer__summary">
         {wallCount} walls · height {formatMeters(geometry.heightMeters)} · floor{' '}

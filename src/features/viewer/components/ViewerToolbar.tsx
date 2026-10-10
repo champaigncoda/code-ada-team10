@@ -3,6 +3,7 @@ interface ViewerToolbarProps {
   readonly onToggleWalls: () => void
   readonly onResetCamera: () => void
   readonly onReturnToEditor: () => void
+  readonly onOpenFurniture?: () => void
 }
 
 export function ViewerToolbar({
@@ -10,12 +11,20 @@ export function ViewerToolbar({
   onToggleWalls,
   onResetCamera,
   onReturnToEditor,
+  onOpenFurniture,
 }: ViewerToolbarProps) {
   return (
     <div className="viewer-toolbar">
-      <button type="button" className="button button--secondary" onClick={onReturnToEditor}>
-        Back to 2D editor
-      </button>
+      <div className="viewer-toolbar__actions">
+        <button type="button" className="button button--secondary" onClick={onReturnToEditor}>
+          Back to 2D editor
+        </button>
+        {onOpenFurniture && (
+          <button type="button" className="button button--secondary" onClick={onOpenFurniture}>
+            Preview furniture
+          </button>
+        )}
+      </div>
       <div className="viewer-toolbar__actions">
         <button
           type="button"
