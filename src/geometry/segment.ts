@@ -30,6 +30,16 @@ export function orientation(a: Point2D, b: Point2D, c: Point2D): Orientation {
   return value > 0 ? 1 : -1
 }
 
+/** Shortest distance from p to the finite segment a–b (not its infinite supporting line). */
+export function distanceToSegment(p: Point2D, a: Point2D, b: Point2D): number {
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  const lengthSquared = dx * dx + dy * dy
+  if (lengthSquared === 0) return distance(p, a)
+  const t = Math.min(Math.max(((p.x - a.x) * dx + (p.y - a.y) * dy) / lengthSquared, 0), 1)
+  return distance(p, { x: a.x + t * dx, y: a.y + t * dy })
+}
+
 /** Assumes p is collinear with a–b; checks it lies within the segment's extent. */
 function isWithinSegmentBounds(p: Point2D, a: Point2D, b: Point2D): boolean {
   return (

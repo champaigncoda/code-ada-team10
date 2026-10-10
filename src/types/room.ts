@@ -17,7 +17,7 @@ export interface RoomDimensions {
 export interface Room {
   readonly id: string
   readonly outline: RoomPolygon
-  /** Null until the user has calibrated the floor plan's scale. */
+  /** Null until the user has confirmed a calibration. */
   readonly calibration: ScaleCalibration | null
   readonly dimensions: RoomDimensions
 }

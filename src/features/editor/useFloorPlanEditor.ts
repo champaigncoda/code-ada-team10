@@ -27,6 +27,10 @@ export function useFloorPlanEditor() {
       dispatch({ type: 'canvasClicked', point, isNearFirstVertex }),
     undoLastVertex: () => dispatch({ type: 'lastVertexRemoved' }),
     clearPolygon: () => dispatch({ type: 'polygonCleared' }),
+    selectReferenceEdge: (edgeIndex: number) => dispatch({ type: 'referenceEdgeSelected', edgeIndex }),
+    changeReferenceLength: (input: string) => dispatch({ type: 'referenceLengthChanged', input }),
+    confirmCalibration: () => dispatch({ type: 'calibrationConfirmed' }),
+    startRecalibration: () => dispatch({ type: 'recalibrationStarted' }),
     dismissError: () => dispatch({ type: 'errorDismissed' }),
   }
 }

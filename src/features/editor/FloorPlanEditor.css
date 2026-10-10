@@ -133,7 +133,20 @@
   padding: 0.125rem 0.25rem;
 }
 
-/* Canvas */
+/* Canvas and side panel */
+
+.editor-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18rem;
+  gap: 0.875rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .editor-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 
 .editor-canvas-frame {
   position: relative;

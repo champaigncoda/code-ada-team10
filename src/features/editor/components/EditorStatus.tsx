@@ -6,7 +6,7 @@ interface EditorStatusProps {
 }
 
 function getInstruction(vertexCount: number, isClosed: boolean): string {
-  if (isClosed) return 'Room outline complete. Clear the polygon to trace it again.'
+  if (isClosed) return 'Room outline complete. Set its real-world size in the Room dimensions panel.'
   if (vertexCount === 0) return 'Click a corner of the room on the floor plan to place the first vertex.'
   if (vertexCount < MIN_POLYGON_VERTICES) return 'Keep clicking along the walls to place each corner in order.'
   return 'Click the first vertex (it highlights when you are close) to close the outline.'

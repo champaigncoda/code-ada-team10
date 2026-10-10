@@ -2,6 +2,14 @@ import { isPointInImage } from '../../geometry/imageBounds'
 import { pointsCoincide } from '../../geometry/point'
 import { validatePolygon } from '../../geometry/polygonValidation'
 import type { Point2D, RoomPolygon } from '../../types/geometry'
+import {
+  type CalibrationState,
+  changeReferenceLength,
+  confirmCalibration,
+  initialCalibrationState,
+  selectReferenceEdge,
+  startRecalibration,
+} from '../calibration/calibrationState'
 import { MIN_POLYGON_VERTICES } from './constants'
 import type { LoadedFloorPlan } from './loadFloorPlanImage'
 
@@ -14,6 +22,8 @@ export interface EditorState {
   readonly floorPlan: LoadedFloorPlan | null
   readonly polygon: RoomPolygon
   readonly isClosed: boolean
+  /** Only meaningful once the polygon is closed; reset whenever the polygon is cleared or replaced. */
+  readonly calibration: CalibrationState
   readonly error: EditorError | null
 }
 
@@ -22,6 +32,10 @@ export type EditorAction =
   | { readonly type: 'canvasClicked'; readonly point: Point2D; readonly isNearFirstVertex: boolean }
   | { readonly type: 'lastVertexRemoved' }
   | { readonly type: 'polygonCleared' }
+  | { readonly type: 'referenceEdgeSelected'; readonly edgeIndex: number }
+  | { readonly type: 'referenceLengthChanged'; readonly input: string }
+  | { readonly type: 'calibrationConfirmed' }
+  | { readonly type: 'recalibrationStarted' }
   | { readonly type: 'errorRaised'; readonly error: EditorError }
   | { readonly type: 'errorDismissed' }
 
@@ -31,7 +45,13 @@ export const initialEditorState: EditorState = {
   floorPlan: null,
   polygon: EMPTY_POLYGON,
   isClosed: false,
+  calibration: initialCalibrationState,
   error: null,
+}
+
+function withCalibration(state: EditorState, calibration: CalibrationState): EditorState {
+  if (!state.isClosed || calibration === state.calibration) return state
+  return { ...state, calibration }
 }
 
 function withError(state: EditorState, message: string, details: readonly string[] = []): EditorState {
@@ -85,7 +105,18 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
       if (state.isClosed || state.polygon.vertices.length === 0) return state
       return { ...state, polygon: { vertices: state.polygon.vertices.slice(0, -1) }, error: null }
     case 'polygonCleared':
-      return { ...state, polygon: EMPTY_POLYGON, isClosed: false, error: null }
+      return { ...state, polygon: EMPTY_POLYGON, isClosed: false, calibration: initialCalibrationState, error: null }
+    case 'referenceEdgeSelected':
+      return withCalibration(
+        state,
+        selectReferenceEdge(state.calibration, action.edgeIndex, state.polygon.vertices.length),
+      )
+    case 'referenceLengthChanged':
+      return withCalibration(state, changeReferenceLength(state.calibration, action.input))
+    case 'calibrationConfirmed':
+      return withCalibration(state, confirmCalibration(state.calibration, state.polygon.vertices))
+    case 'recalibrationStarted':
+      return withCalibration(state, startRecalibration(state.calibration))
     case 'errorRaised':
       return { ...state, error: action.error }
     case 'errorDismissed':

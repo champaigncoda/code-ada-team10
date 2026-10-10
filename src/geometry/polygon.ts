@@ -28,6 +28,14 @@ export function getEdge(vertices: readonly Point2D[], index: number): readonly [
   return [start, end]
 }
 
+/** Pixel length of every edge, in edge-index order, including the closing edge. */
+export function edgeLengths(vertices: readonly Point2D[]): number[] {
+  return vertices.map((_, i) => {
+    const [start, end] = getEdge(vertices, i)
+    return distance(start, end)
+  })
+}
+
 export function areEdgesAdjacent(i: number, j: number, vertexCount: number): boolean {
   const diff = Math.abs(i - j)
   return diff === 1 || diff === vertexCount - 1
