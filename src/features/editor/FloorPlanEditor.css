@@ -142,6 +142,12 @@
   align-items: start;
 }
 
+.editor-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
 @media (max-width: 900px) {
   .editor-workspace {
     grid-template-columns: minmax(0, 1fr);

@@ -1,20 +1,32 @@
 import { CalibrationPanel } from '../calibration/components/CalibrationPanel'
 import { getReferenceEdgeIndex, isCalibrationEditable } from '../calibration/calibrationState'
+import { RoomGenerationPanel } from '../room/components/RoomGenerationPanel'
+import { RoomViewer } from '../viewer/components/RoomViewer'
 import { EditorStatus } from './components/EditorStatus'
 import { EditorToolbar } from './components/EditorToolbar'
 import { ErrorBanner } from './components/ErrorBanner'
 import { FloorPlanCanvas } from './components/FloorPlanCanvas'
 import { UploadDropzone } from './components/UploadDropzone'
-import { selectCanConfirmCalibration, selectWallLengthsMeters } from './editorSelectors'
+import {
+  selectCanConfirmCalibration,
+  selectCanGenerateRoom,
+  selectGeneratedRoomSource,
+  selectWallLengthsMeters,
+} from './editorSelectors'
 import './FloorPlanEditor.css'
 import { useFloorPlanEditor } from './useFloorPlanEditor'
 
 export function FloorPlanEditor() {
   const editor = useFloorPlanEditor()
-  const { floorPlan, polygon, isClosed, calibration, error } = editor.state
+  const { floorPlan, polygon, isClosed, calibration, error, roomHeightInput, activeView } = editor.state
   const vertexCount = polygon.vertices.length
   const referenceEdgeIndex = getReferenceEdgeIndex(calibration)
   const wallLengthsMeters = selectWallLengthsMeters(editor.state)
+  const generatedSource = selectGeneratedRoomSource(editor.state)
+
+  if (activeView === 'viewer' && generatedSource) {
+    return <RoomViewer source={generatedSource} onReturnToEditor={editor.returnToEditor} />
+  }
 
   const canvasFrame = (
     <div className="editor-canvas-frame">
@@ -49,25 +61,38 @@ export function FloorPlanEditor() {
             onUndo={editor.undoLastVertex}
             onClear={editor.clearPolygon}
           />
-          <EditorStatus vertexCount={vertexCount} isClosed={isClosed} />
+          <EditorStatus
+            vertexCount={vertexCount}
+            isClosed={isClosed}
+            isCalibrationConfirmed={calibration.status === 'confirmed'}
+          />
         </>
       )}
       {floorPlan ? (
         <div className="editor-workspace">
           {canvasFrame}
-          <CalibrationPanel
-            isPolygonClosed={isClosed}
-            vertexCount={vertexCount}
-            status={calibration.status}
-            referenceEdgeIndex={referenceEdgeIndex}
-            lengthInput={calibration.lengthInput}
-            wallLengthsMeters={wallLengthsMeters}
-            canConfirm={selectCanConfirmCalibration(editor.state)}
-            onSelectWall={editor.selectReferenceEdge}
-            onLengthChange={editor.changeReferenceLength}
-            onConfirm={editor.confirmCalibration}
-            onRecalibrate={editor.startRecalibration}
-          />
+          <div className="editor-sidebar">
+            <CalibrationPanel
+              isPolygonClosed={isClosed}
+              vertexCount={vertexCount}
+              status={calibration.status}
+              referenceEdgeIndex={referenceEdgeIndex}
+              lengthInput={calibration.lengthInput}
+              wallLengthsMeters={wallLengthsMeters}
+              canConfirm={selectCanConfirmCalibration(editor.state)}
+              onSelectWall={editor.selectReferenceEdge}
+              onLengthChange={editor.changeReferenceLength}
+              onConfirm={editor.confirmCalibration}
+              onRecalibrate={editor.startRecalibration}
+            />
+            <RoomGenerationPanel
+              heightInput={roomHeightInput}
+              isCalibrationConfirmed={calibration.status === 'confirmed'}
+              canGenerate={selectCanGenerateRoom(editor.state)}
+              onHeightChange={editor.changeRoomHeight}
+              onGenerate={editor.generateRoom}
+            />
+          </div>
         </div>
       ) : (
         canvasFrame

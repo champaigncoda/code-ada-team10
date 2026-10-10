@@ -31,6 +31,9 @@ export function useFloorPlanEditor() {
     changeReferenceLength: (input: string) => dispatch({ type: 'referenceLengthChanged', input }),
     confirmCalibration: () => dispatch({ type: 'calibrationConfirmed' }),
     startRecalibration: () => dispatch({ type: 'recalibrationStarted' }),
+    changeRoomHeight: (input: string) => dispatch({ type: 'roomHeightChanged', input }),
+    generateRoom: () => dispatch({ type: 'roomGenerated' }),
+    returnToEditor: () => dispatch({ type: 'editorReturned' }),
     dismissError: () => dispatch({ type: 'errorDismissed' }),
   }
 }

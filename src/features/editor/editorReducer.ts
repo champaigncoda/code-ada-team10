@@ -10,7 +10,9 @@ import {
   selectReferenceEdge,
   startRecalibration,
 } from '../calibration/calibrationState'
+import { DEFAULT_ROOM_HEIGHT_INPUT, parseRoomHeight } from '../room/roomHeight'
 import { MIN_POLYGON_VERTICES } from './constants'
+import { selectRoomModelSource } from './editorSelectors'
 import type { LoadedFloorPlan } from './loadFloorPlanImage'
 
 export interface EditorError {
@@ -24,8 +26,18 @@ export interface EditorState {
   readonly isClosed: boolean
   /** Only meaningful once the polygon is closed; reset whenever the polygon is cleared or replaced. */
   readonly calibration: CalibrationState
+  /** Wall height exactly as typed; parsed on use so no rounded copy exists. */
+  readonly roomHeightInput: string
+  /**
+   * Which view is showing. The 3D model is never stored: it is derived from
+   * the outline, confirmed calibration and height, and any action that
+   * invalidates those inputs returns to the editor.
+   */
+  readonly activeView: EditorView
   readonly error: EditorError | null
 }
+
+export type EditorView = 'editor' | 'viewer'
 
 export type EditorAction =
   | { readonly type: 'floorPlanLoaded'; readonly floorPlan: LoadedFloorPlan }
@@ -36,6 +48,9 @@ export type EditorAction =
   | { readonly type: 'referenceLengthChanged'; readonly input: string }
   | { readonly type: 'calibrationConfirmed' }
   | { readonly type: 'recalibrationStarted' }
+  | { readonly type: 'roomHeightChanged'; readonly input: string }
+  | { readonly type: 'roomGenerated' }
+  | { readonly type: 'editorReturned' }
   | { readonly type: 'errorRaised'; readonly error: EditorError }
   | { readonly type: 'errorDismissed' }
 
@@ -46,6 +61,8 @@ export const initialEditorState: EditorState = {
   polygon: EMPTY_POLYGON,
   isClosed: false,
   calibration: initialCalibrationState,
+  roomHeightInput: DEFAULT_ROOM_HEIGHT_INPUT,
+  activeView: 'editor',
   error: null,
 }
 
@@ -95,17 +112,35 @@ function handleCanvasClick(state: EditorState, point: Point2D, isNearFirstVertex
   return closePolygon(state)
 }
 
+function generateRoom(state: EditorState): EditorState {
+  if (!selectRoomModelSource(state)) {
+    return withError(
+      state,
+      "The 3D room can't be generated yet. Close the outline, confirm its dimensions and enter a valid room height.",
+    )
+  }
+  return { ...state, activeView: 'viewer', error: null }
+}
+
 export function editorReducer(state: EditorState, action: EditorAction): EditorState {
   switch (action.type) {
     case 'floorPlanLoaded':
-      return { ...initialEditorState, floorPlan: action.floorPlan }
+      // The height describes the room being modeled, not the image, so it survives a replacement.
+      return { ...initialEditorState, floorPlan: action.floorPlan, roomHeightInput: state.roomHeightInput }
     case 'canvasClicked':
       return handleCanvasClick(state, action.point, action.isNearFirstVertex)
     case 'lastVertexRemoved':
       if (state.isClosed || state.polygon.vertices.length === 0) return state
       return { ...state, polygon: { vertices: state.polygon.vertices.slice(0, -1) }, error: null }
     case 'polygonCleared':
-      return { ...state, polygon: EMPTY_POLYGON, isClosed: false, calibration: initialCalibrationState, error: null }
+      return {
+        ...state,
+        polygon: EMPTY_POLYGON,
+        isClosed: false,
+        calibration: initialCalibrationState,
+        activeView: 'editor',
+        error: null,
+      }
     case 'referenceEdgeSelected':
       return withCalibration(
         state,
@@ -115,8 +150,20 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
       return withCalibration(state, changeReferenceLength(state.calibration, action.input))
     case 'calibrationConfirmed':
       return withCalibration(state, confirmCalibration(state.calibration, state.polygon.vertices))
-    case 'recalibrationStarted':
-      return withCalibration(state, startRecalibration(state.calibration))
+    case 'recalibrationStarted': {
+      const next = withCalibration(state, startRecalibration(state.calibration))
+      return next === state ? state : { ...next, activeView: 'editor' }
+    }
+    case 'roomHeightChanged':
+      return {
+        ...state,
+        roomHeightInput: action.input,
+        activeView: parseRoomHeight(action.input).ok ? state.activeView : 'editor',
+      }
+    case 'roomGenerated':
+      return generateRoom(state)
+    case 'editorReturned':
+      return state.activeView === 'editor' ? state : { ...state, activeView: 'editor' }
     case 'errorRaised':
       return { ...state, error: action.error }
     case 'errorDismissed':

@@ -36,6 +36,45 @@ export function edgeLengths(vertices: readonly Point2D[]): number[] {
   })
 }
 
+export interface BoundingBox {
+  readonly minX: number
+  readonly minY: number
+  readonly maxX: number
+  readonly maxY: number
+}
+
+export function boundingBox(vertices: readonly Point2D[]): BoundingBox {
+  if (vertices.length === 0) {
+    throw new RangeError('A bounding box needs at least one vertex')
+  }
+  return {
+    minX: Math.min(...vertices.map((v) => v.x)),
+    minY: Math.min(...vertices.map((v) => v.y)),
+    maxX: Math.max(...vertices.map((v) => v.x)),
+    maxY: Math.max(...vertices.map((v) => v.y)),
+  }
+}
+
+export function boundingBoxCenter(vertices: readonly Point2D[]): Point2D {
+  const box = boundingBox(vertices)
+  return { x: (box.minX + box.maxX) / 2, y: (box.minY + box.maxY) / 2 }
+}
+
+/** Even-odd ray cast. Vertices on an edge are treated as inside. */
+export function isPointInPolygon(point: Point2D, vertices: readonly Point2D[]): boolean {
+  let inside = false
+  for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+    const current = vertices[i]
+    const previous = vertices[j]
+    if (!current || !previous) continue
+    const intersects =
+      current.y > point.y !== previous.y > point.y &&
+      point.x < ((previous.x - current.x) * (point.y - current.y)) / (previous.y - current.y) + current.x
+    if (intersects) inside = !inside
+  }
+  return inside
+}
+
 export function areEdgesAdjacent(i: number, j: number, vertexCount: number): boolean {
   const diff = Math.abs(i - j)
   return diff === 1 || diff === vertexCount - 1

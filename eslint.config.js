@@ -28,6 +28,8 @@ export default defineConfig([
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/consistent-type-imports': 'error',
+      // R3F attaches Three.js properties (args, intensity, position, …) to host elements.
+      'react/no-unknown-property': 'off',
     },
   },
 ])

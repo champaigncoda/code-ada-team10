@@ -1,0 +1,35 @@
+.room-generation-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.room-generation-panel__title {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.room-generation-panel__label {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.room-generation-panel__message,
+.room-generation-panel__hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.room-generation-panel__message--error {
+  color: var(--color-danger);
+}
+
+.room-generation-panel .button {
+  margin-top: 0.375rem;
+}

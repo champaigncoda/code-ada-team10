@@ -2,7 +2,7 @@
 import { act, cleanup, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { RECTANGLE, createFakeFloorPlan } from './editorTestUtils'
-import { selectIsReadyFor3D } from './editorSelectors'
+import { selectCanGenerateRoom, selectGeneratedRoomSource, selectIsReadyFor3D } from './editorSelectors'
 import type * as LoaderModule from './loadFloorPlanImage'
 import { loadFloorPlanImage } from './loadFloorPlanImage'
 import { useFloorPlanEditor } from './useFloorPlanEditor'
@@ -68,5 +68,35 @@ describe('useFloorPlanEditor upload flow', () => {
     expect(state.calibration).toEqual({ status: 'uncalibrated', referenceEdgeIndex: null, lengthInput: '' })
     expect(selectIsReadyFor3D(state)).toBe(false)
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:first')
+  })
+})
+
+describe('useFloorPlanEditor 3D generation', () => {
+  it('opens the viewer and returns to the editor without losing the room', async () => {
+    const hook = await setUpConfirmedRoom()
+    act(() => hook.result.current.generateRoom())
+    expect(hook.result.current.state.activeView).toBe('viewer')
+    expect(selectGeneratedRoomSource(hook.result.current.state)?.heightMeters).toBe(2.8)
+
+    const viewing = hook.result.current.state
+    act(() => hook.result.current.returnToEditor())
+    const back = hook.result.current.state
+    expect(back.activeView).toBe('editor')
+    expect(back.polygon).toBe(viewing.polygon)
+    expect(back.calibration).toBe(viewing.calibration)
+    expect(back.floorPlan).toBe(viewing.floorPlan)
+    expect(selectCanGenerateRoom(back)).toBe(true)
+  })
+
+  it('drops the generated room after a successful image replacement', async () => {
+    const hook = await setUpConfirmedRoom()
+    act(() => hook.result.current.generateRoom())
+    vi.mocked(loadFloorPlanImage).mockResolvedValueOnce({
+      ok: true,
+      floorPlan: createFakeFloorPlan('blob:second', 'second.png'),
+    })
+    await act(() => hook.result.current.uploadFile(new File(['png'], 'second.png', { type: 'image/png' })))
+    expect(hook.result.current.state.activeView).toBe('editor')
+    expect(selectGeneratedRoomSource(hook.result.current.state)).toBeNull()
   })
 })

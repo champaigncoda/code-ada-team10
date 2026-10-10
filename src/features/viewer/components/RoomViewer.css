@@ -1,0 +1,51 @@
+.room-viewer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.viewer-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.viewer-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.room-viewer__summary,
+.room-viewer__hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.room-viewer__error {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-danger-border);
+  border-radius: var(--radius-small);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.room-viewer__frame {
+  position: relative;
+  height: 70vh;
+  min-height: 420px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #e8eaef;
+}
+
+.room-viewer__canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
