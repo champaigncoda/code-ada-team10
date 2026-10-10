@@ -6,6 +6,7 @@ import {
   changeFurnitureDimension,
   draftFromDefaults,
   parseFurnitureDraft,
+  resolveFurniturePreview,
   type FurnitureDraft,
 } from './furnitureConfig'
 
@@ -19,10 +20,7 @@ export function useFurnitureDraft(initial: FurnitureDraft = draftFromDefaults())
 
   function applyDraft(next: FurnitureDraft) {
     setDraft(next)
-    setPreview((current) => {
-      const parsed = parseFurnitureDraft(next)
-      return parsed ? { ...parsed, id: current.id } : current
-    })
+    setPreview((current) => resolveFurniturePreview(next, current))
   }
 
   return {

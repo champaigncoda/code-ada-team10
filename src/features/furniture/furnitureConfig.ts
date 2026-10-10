@@ -9,10 +9,11 @@ import { parsePositiveMeters } from '../../utils/parsePositiveMeters'
 import {
   DEFAULT_FURNITURE_CATEGORY,
   DEFAULT_FURNITURE_COLOR,
+  FURNITURE_CATEGORY_LABELS,
   FURNITURE_DEFAULTS,
-  FURNITURE_LIMITS,
 } from './catalog'
 import { normalizeFurnitureColor } from './color'
+import { buildFurnitureLayout } from './layout/buildFurnitureLayout'
 
 export interface FurnitureDraft {
   readonly category: FurnitureCategory
@@ -30,10 +31,6 @@ const AXIS_LABEL: Record<FurnitureDimensionAxis, string> = {
   width: 'width',
   depth: 'depth',
   height: 'height',
-}
-
-export function formatLimit(meters: number): string {
-  return meters.toFixed(2)
 }
 
 export function createFurnitureId(): string {
@@ -79,20 +76,26 @@ export function parseFurnitureDimension(
   category: FurnitureCategory,
   axis: FurnitureDimensionAxis,
 ): FurnitureDimensionParseResult {
-  const limits = FURNITURE_LIMITS[category][axis]
-  const parsed = parsePositiveMeters(input, {
+  return parsePositiveMeters(input, {
     empty: `Enter the ${AXIS_LABEL[axis]} in meters.`,
     example: String(FURNITURE_DEFAULTS[category][axis]),
     nonPositive: `The ${AXIS_LABEL[axis]} must be greater than zero.`,
   })
-  if (!parsed.ok) return parsed
-  if (parsed.meters < limits.min || parsed.meters > limits.max) {
-    return {
-      ok: false,
-      message: `${category[0]?.toUpperCase() ?? ''}${category.slice(1)} ${AXIS_LABEL[axis]} must be between ${formatLimit(limits.min)} m and ${formatLimit(limits.max)} m.`,
-    }
+}
+
+/**
+ * Shown when every field is a positive number but the parts cannot be assembled
+ * into a model WebGL can actually draw.
+ */
+export function describeUnbuildableFurniture(draft: FurnitureDraft): string | null {
+  const parsed = parseFurnitureDraft(draft)
+  if (!parsed || buildFurnitureLayout(parsed)) return null
+  const label = FURNITURE_CATEGORY_LABELS[draft.category].toLowerCase()
+  const { width, depth, height } = parsed.dimensions
+  if (Math.max(width, depth, height) > 1_000_000) {
+    return `These dimensions are too large to build a stable ${label}. Reduce the width, depth, or height.`
   }
-  return parsed
+  return `These dimensions are too small to build a recognizable ${label}. Increase the width, depth, or height.`
 }
 
 export function parseFurnitureDraft(draft: FurnitureDraft): FurnitureConfig | null {
@@ -122,9 +125,11 @@ export function createFurnitureConfig(input: {
   }
 }
 
-/** Keep showing the last good model while the user is mid-edit. */
+/** Keep showing the last good model while the user is mid-edit or the size cannot be assembled. */
 export function resolveFurniturePreview(draft: FurnitureDraft, lastValid: FurnitureConfig): FurnitureConfig {
-  return parseFurnitureDraft(draft) ?? lastValid
+  const parsed = parseFurnitureDraft(draft)
+  if (!parsed || !buildFurnitureLayout({ ...parsed, id: lastValid.id })) return lastValid
+  return { ...parsed, id: lastValid.id }
 }
 
 export function withFurnitureColor(config: FurnitureConfig, color: FurnitureColor): FurnitureConfig {

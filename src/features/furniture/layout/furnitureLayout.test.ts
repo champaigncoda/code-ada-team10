@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FurnitureCategory, FurnitureConfig, FurnitureDimensions } from '../../../types/furniture'
-import { FURNITURE_BOUNDS_TOLERANCE, FURNITURE_DEFAULTS, FURNITURE_LIMITS } from '../catalog'
+import { FURNITURE_BOUNDS_TOLERANCE, FURNITURE_DEFAULTS } from '../catalog'
 import { createFurnitureConfig } from '../furnitureConfig'
 import { buildFurnitureLayout } from './buildFurnitureLayout'
 import { layoutBounds } from './parts'
@@ -118,12 +118,65 @@ describe('parametric scaling', () => {
 })
 
 describe('supported size extremes', () => {
-  it.each(['sofa', 'bed', 'table'] as const)('builds a valid %s at minimum and maximum sizes', (category) => {
-    const limits = FURNITURE_LIMITS[category]
-    expectValidLayout(category, { width: limits.width.min, depth: limits.depth.min, height: limits.height.min })
-    expectValidLayout(category, { width: limits.width.max, depth: limits.depth.max, height: limits.height.max })
+  it.each([
+    ['sofa', { width: 0.35, depth: 0.28, height: 0.22 }, { width: 8, depth: 2.4, height: 1.4 }],
+    ['bed', { width: 0.45, depth: 0.7, height: 0.35 }, { width: 4, depth: 5, height: 2 }],
+    ['table', { width: 0.22, depth: 0.16, height: 0.18 }, { width: 6, depth: 2.5, height: 1.4 }],
+  ] as const)('builds a valid %s at unusually small and large sizes', (category, small, large) => {
+    expectValidLayout(category, small)
+    expectValidLayout(category, large)
+  })
+
+  it('does not let sofa arms grow with an unusually wide seat', () => {
+    const layout = expectValidLayout('sofa', { width: 8, depth: 1.2, height: 0.9 })
+    expect(layout?.parts.find((part) => part.name === 'left-arm')?.size.x).toBeCloseTo(0.13, 9)
+    expect(layout?.parts.filter((part) => part.name.startsWith('seat-cushion')).length).toBeGreaterThan(3)
+  })
+
+  it('rejects sizes that collapse in 32-bit rendering', () => {
+    expect(buildFurnitureLayout(config('sofa', { width: 1e-320, depth: 1e-320, height: 1e-320 }))).toBeNull()
+    expect(buildFurnitureLayout(config('table', { width: 1e20, depth: 1e20, height: 1e20 }))).toBeNull()
   })
 })
+
+describe('bed frame faces', () => {
+  it('does not stack coplanar outer faces on the lower frame', () => {
+    const layout = expectValidLayout('bed', FURNITURE_DEFAULTS.bed)
+    if (!layout) return
+    const shell = ['headboard', 'left-rail', 'right-rail', 'foot-rail'].map((name) => {
+      const part = layout.parts.find((item) => item.name === name)
+      expect(part).toBeTruthy()
+      return part!
+    })
+    for (let index = 0; index < shell.length; index += 1) {
+      for (let other = index + 1; other < shell.length; other += 1) {
+        const a = shell[index]
+        const b = shell[other]
+        if (!a || !b) continue
+        expect(boxesOverlap(a, b)).toBe(false)
+      }
+    }
+    const platform = layout.parts.find((part) => part.name === 'platform')
+    const left = layout.parts.find((part) => part.name === 'left-rail')
+    expect(platform && left).toBeTruthy()
+    if (!platform || !left) return
+    expect(platform.center.y - platform.size.y / 2).toBeGreaterThan(0)
+    expect(platform.center.x - platform.size.x / 2).toBeGreaterThan(left.center.x - left.size.x / 2)
+  })
+})
+
+function boxesOverlap(
+  a: { readonly center: { readonly x: number; readonly y: number; readonly z: number }; readonly size: { readonly x: number; readonly y: number; readonly z: number } },
+  b: { readonly center: { readonly x: number; readonly y: number; readonly z: number }; readonly size: { readonly x: number; readonly y: number; readonly z: number } },
+): boolean {
+  const separated = (centerA: number, sizeA: number, centerB: number, sizeB: number) =>
+    centerA + sizeA / 2 <= centerB - sizeB / 2 + 1e-8 || centerB + sizeB / 2 <= centerA - sizeA / 2 + 1e-8
+  return !(
+    separated(a.center.x, a.size.x, b.center.x, b.size.x) ||
+    separated(a.center.y, a.size.y, b.center.y, b.size.y) ||
+    separated(a.center.z, a.size.z, b.center.z, b.size.z)
+  )
+}
 
 describe('grounding and origin', () => {
   it('rests every category on y = 0 and centers it on x and z', () => {

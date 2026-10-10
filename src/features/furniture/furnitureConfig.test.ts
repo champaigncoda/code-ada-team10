@@ -4,6 +4,7 @@ import {
   changeFurnitureCategory,
   changeFurnitureDimension,
   createFurnitureConfig,
+  describeUnbuildableFurniture,
   draftFromDefaults,
   parseFurnitureDimension,
   parseFurnitureDraft,
@@ -17,12 +18,41 @@ describe('furniture configuration', () => {
     expect(parseFurnitureDraft(draft)?.dimensions).toEqual(FURNITURE_DEFAULTS[category])
   })
 
-  it('rejects zero, negative, empty and out-of-range dimensions', () => {
+  it('rejects zero, negative, empty, nonnumeric and non-finite dimensions', () => {
     expect(parseFurnitureDimension('0', 'sofa', 'width').ok).toBe(false)
     expect(parseFurnitureDimension('-1', 'sofa', 'depth').ok).toBe(false)
     expect(parseFurnitureDimension('', 'bed', 'height').ok).toBe(false)
-    expect(parseFurnitureDimension('0.2', 'table', 'width').ok).toBe(false)
-    expect(parseFurnitureDimension('9', 'sofa', 'width').ok).toBe(false)
+    expect(parseFurnitureDimension('abc', 'table', 'width').ok).toBe(false)
+    expect(parseFurnitureDimension('NaN', 'bed', 'depth').ok).toBe(false)
+    expect(parseFurnitureDimension('Infinity', 'sofa', 'height').ok).toBe(false)
+  })
+
+  it('accepts unusually large finite dimensions', () => {
+    const parsed = parseFurnitureDimension('12.5', 'sofa', 'width')
+    expect(parsed.ok).toBe(true)
+    if (parsed.ok) expect(parsed.meters).toBe(12.5)
+    const draft = {
+      ...draftFromDefaults('table'),
+      widthInput: '8',
+      depthInput: '3',
+      heightInput: '1.5',
+    }
+    expect(parseFurnitureDraft(draft)?.dimensions).toEqual({ width: 8, depth: 3, height: 1.5 })
+    expect(buildFurnitureLayout(parseFurnitureDraft(draft)!)).toBeTruthy()
+  })
+
+  it('explains dimensions that cannot be assembled and keeps the last preview', () => {
+    const valid = draftFromDefaults('sofa')
+    const last = parseFurnitureDraft(valid)
+    expect(last).toBeTruthy()
+    if (!last) return
+    const tiny = { ...valid, widthInput: '1e-320', depthInput: '1e-320', heightInput: '1e-320' }
+    expect(describeUnbuildableFurniture(tiny)).toMatch(/too small to build a recognizable sofa/i)
+    expect(resolveFurniturePreview(tiny, last)).toEqual(last)
+    const huge = { ...valid, widthInput: '1e20', depthInput: '1e20', heightInput: '1e20' }
+    expect(describeUnbuildableFurniture(huge)).toMatch(/too large to build a stable sofa/i)
+    expect(resolveFurniturePreview(huge, last)).toEqual(last)
+    expect(buildFurnitureLayout(resolveFurniturePreview(huge, last))).toBeTruthy()
   })
 
   it('resets dimensions when the category changes and keeps the color', () => {

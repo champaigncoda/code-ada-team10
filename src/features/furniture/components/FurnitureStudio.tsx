@@ -31,7 +31,6 @@ export function FurnitureStudio() {
           {layout ? (
             <Canvas
               className="furniture-studio__canvas"
-              shadows
               camera={{ fov: VIEWER_FOV_DEGREES, near: 0.05, far: 80, position: [2, 2, 2] }}
               gl={{ antialias: true }}
               style={{ background: '#e4e7ee' }}
@@ -40,7 +39,7 @@ export function FurnitureStudio() {
             </Canvas>
           ) : (
             <p className="furniture-studio__error" role="alert">
-              Enter valid dimensions to preview this furniture.
+              These dimensions are too small to build a recognizable model. Increase the width, depth, or height.
             </p>
           )}
         </div>

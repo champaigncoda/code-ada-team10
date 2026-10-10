@@ -49,14 +49,3 @@ export interface FurniturePlacement {
   readonly z: number
   readonly rotationY: number
 }
-
-export interface DimensionLimits {
-  readonly min: number
-  readonly max: number
-}
-
-export interface FurnitureCategoryLimits {
-  readonly width: DimensionLimits
-  readonly depth: DimensionLimits
-  readonly height: DimensionLimits
-}

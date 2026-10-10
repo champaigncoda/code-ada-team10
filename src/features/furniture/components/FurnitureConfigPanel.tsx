@@ -4,10 +4,9 @@ import {
   FURNITURE_CATEGORIES,
   FURNITURE_CATEGORY_LABELS,
   FURNITURE_COLOR_PRESETS,
-  FURNITURE_LIMITS,
 } from '../catalog'
 import type { FurnitureDraft } from '../furnitureConfig'
-import { formatLimit, parseFurnitureDimension } from '../furnitureConfig'
+import { describeUnbuildableFurniture, parseFurnitureDimension } from '../furnitureConfig'
 import './FurnitureConfigPanel.css'
 
 interface FurnitureConfigPanelProps {
@@ -30,8 +29,8 @@ export function FurnitureConfigPanel({
   onColorChange,
 }: FurnitureConfigPanelProps) {
   const colorPickerId = useId()
-  const limits = FURNITURE_LIMITS[draft.category]
   const inputs = { width: draft.widthInput, depth: draft.depthInput, height: draft.heightInput }
+  const geometryMessage = describeUnbuildableFurniture(draft)
 
   return (
     <aside className="furniture-panel" aria-label="Furniture configuration">
@@ -54,7 +53,6 @@ export function FurnitureConfigPanel({
         const inputId = `${colorPickerId}-${axis}`
         const messageId = `${inputId}-message`
         const parsed = parseFurnitureDimension(inputs[axis], draft.category, axis)
-        const range = limits[axis]
         return (
           <div key={axis} className="furniture-field">
             <label htmlFor={inputId} className="furniture-field__label">
@@ -77,13 +75,17 @@ export function FurnitureConfigPanel({
               id={messageId}
               className={`furniture-field__message${parsed.ok ? '' : ' furniture-field__message--error'}`}
             >
-              {parsed.ok
-                ? `Supported ${label.toLowerCase()}: ${formatLimit(range.min)}–${formatLimit(range.max)} m`
-                : parsed.message}
+              {parsed.ok ? `Overall ${label.toLowerCase()} in meters.` : parsed.message}
             </p>
           </div>
         )
       })}
+
+      {geometryMessage ? (
+        <p className="furniture-field__message furniture-field__message--error" role="alert">
+          {geometryMessage}
+        </p>
+      ) : null}
 
       <fieldset className="furniture-colors">
         <legend>Color</legend>

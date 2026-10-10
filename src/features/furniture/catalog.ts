@@ -1,4 +1,4 @@
-import type { FurnitureCategory, FurnitureCategoryLimits, FurnitureColor, FurnitureDimensions } from '../../types/furniture'
+import type { FurnitureCategory, FurnitureColor, FurnitureDimensions } from '../../types/furniture'
 
 export const FURNITURE_CATEGORIES: readonly FurnitureCategory[] = ['sofa', 'bed', 'table']
 
@@ -9,27 +9,10 @@ export const FURNITURE_CATEGORY_LABELS: Record<FurnitureCategory, string> = {
 }
 
 /**
- * Inclusive size ranges in meters. They cover common retail furniture while
- * keeping every parametric part strictly positive at the extremes.
+ * Suggested starting sizes in meters. Any finite positive size is accepted;
+ * internal parts scale down when a dimension is too small for the usual
+ * absolute proportions. There is no category maximum.
  */
-export const FURNITURE_LIMITS: Record<FurnitureCategory, FurnitureCategoryLimits> = {
-  sofa: {
-    width: { min: 1.2, max: 3.5 },
-    depth: { min: 0.7, max: 1.4 },
-    height: { min: 0.65, max: 1.2 },
-  },
-  bed: {
-    width: { min: 0.8, max: 2.2 },
-    depth: { min: 1.6, max: 2.4 },
-    height: { min: 0.7, max: 1.4 },
-  },
-  table: {
-    width: { min: 0.6, max: 2.4 },
-    depth: { min: 0.4, max: 1.4 },
-    height: { min: 0.4, max: 1.1 },
-  },
-}
-
 export const FURNITURE_DEFAULTS: Record<FurnitureCategory, FurnitureDimensions> = {
   sofa: { width: 2, depth: 0.9, height: 0.85 },
   bed: { width: 1.6, depth: 2, height: 1 },

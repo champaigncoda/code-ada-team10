@@ -61,6 +61,25 @@ describe('FurnitureConfigPanel', () => {
     expect(Number(screen.getByTestId('part-count').textContent)).toBeGreaterThan(0)
   })
 
+  it('accepts a width above the old category maximum', () => {
+    render(<Harness />)
+    fireEvent.change(screen.getByLabelText('Width'), { target: { value: '9' } })
+    expect(screen.getByText(/overall width in meters/i)).toBeTruthy()
+    expect(screen.getByTestId('preview-size').textContent).toBe('9,0.9,0.85')
+    expect(Number(screen.getByTestId('part-count').textContent)).toBeGreaterThan(0)
+  })
+
+  it('explains an unbuildable size without dropping the last preview', () => {
+    render(<Harness />)
+    const partsBefore = screen.getByTestId('part-count').textContent
+    fireEvent.change(screen.getByLabelText('Width'), { target: { value: '1e-320' } })
+    fireEvent.change(screen.getByLabelText('Depth'), { target: { value: '1e-320' } })
+    fireEvent.change(screen.getByLabelText('Height'), { target: { value: '1e-320' } })
+    expect(screen.getByRole('alert').textContent).toMatch(/too small/i)
+    expect(screen.getByTestId('preview-size').textContent).toBe('2,0.9,0.85')
+    expect(screen.getByTestId('part-count').textContent).toBe(partsBefore)
+  })
+
   it('updates color without changing size', () => {
     render(<Harness />)
     fireEvent.click(screen.getByRole('button', { name: 'Navy' }))
