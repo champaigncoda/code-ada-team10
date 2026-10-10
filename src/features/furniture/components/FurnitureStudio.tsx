@@ -1,12 +1,10 @@
-import { Canvas } from '@react-three/fiber'
 import { useMemo, useState } from 'react'
 import { formatMeters } from '../../calibration/scale'
-import { VIEWER_FOV_DEGREES } from '../../viewer/camera/cameraView'
 import { FURNITURE_CATEGORY_LABELS } from '../catalog'
 import { buildFurnitureLayout } from '../layout/buildFurnitureLayout'
 import { useFurnitureDraft } from '../useFurnitureDraft'
 import { FurnitureConfigPanel } from './FurnitureConfigPanel'
-import { FurniturePreviewScene } from './FurniturePreviewScene'
+import { FurniturePreviewCanvas } from './FurniturePreviewCanvas'
 import './FurnitureStudio.css'
 
 export function FurnitureStudio() {
@@ -28,20 +26,12 @@ export function FurnitureStudio() {
       </div>
       <div className="furniture-studio__workspace">
         <div className="furniture-studio__frame">
-          {layout ? (
-            <Canvas
-              className="furniture-studio__canvas"
-              camera={{ fov: VIEWER_FOV_DEGREES, near: 0.05, far: 80, position: [2, 2, 2] }}
-              gl={{ antialias: true }}
-              style={{ background: '#e4e7ee' }}
-            >
-              <FurniturePreviewScene layout={layout} color={furniture.preview.color} resetToken={resetToken} />
-            </Canvas>
-          ) : (
-            <p className="furniture-studio__error" role="alert">
-              These dimensions are too small to build a recognizable model. Increase the width, depth, or height.
-            </p>
-          )}
+          <FurniturePreviewCanvas
+            layout={layout}
+            color={furniture.preview.color}
+            resetToken={resetToken}
+            className="furniture-studio__canvas"
+          />
         </div>
         <FurnitureConfigPanel
           draft={furniture.draft}

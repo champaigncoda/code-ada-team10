@@ -10,6 +10,14 @@ import {
   selectReferenceEdge,
   startRecalibration,
 } from '../calibration/calibrationState'
+import {
+  initialFurnitureSession,
+  interruptFurniturePlacement,
+  isFurnitureSessionAction,
+  reduceFurnitureSession,
+  type FurnitureSession,
+  type FurnitureSessionAction,
+} from '../furniture/session/furnitureSession'
 import { DEFAULT_ROOM_HEIGHT_INPUT, parseRoomHeight } from '../room/roomHeight'
 import { MIN_POLYGON_VERTICES } from './constants'
 import { selectRoomModelSource } from './editorSelectors'
@@ -35,11 +43,17 @@ export interface EditorState {
    */
   readonly activeView: EditorView
   readonly error: EditorError | null
+  /**
+   * Placed furniture and the viewer's create / place / edit mode.
+   * Cleared when the outline or calibration changes. Wall-height edits keep it.
+   */
+  readonly furnitureSession: FurnitureSession
 }
 
 export type EditorView = 'editor' | 'viewer'
 
 export type EditorAction =
+  | FurnitureSessionAction
   | { readonly type: 'floorPlanLoaded'; readonly floorPlan: LoadedFloorPlan }
   | { readonly type: 'canvasClicked'; readonly point: Point2D; readonly isNearFirstVertex: boolean }
   | { readonly type: 'lastVertexRemoved' }
@@ -64,6 +78,7 @@ export const initialEditorState: EditorState = {
   roomHeightInput: DEFAULT_ROOM_HEIGHT_INPUT,
   activeView: 'editor',
   error: null,
+  furnitureSession: initialFurnitureSession(),
 }
 
 function withCalibration(state: EditorState, calibration: CalibrationState): EditorState {
@@ -84,7 +99,7 @@ function placeVertex(state: EditorState, point: Point2D): EditorState {
   if (last && pointsCoincide(last, point)) {
     return withError(state, 'That point is at the same position as the previous vertex.')
   }
-  return { ...state, polygon: { vertices: [...state.polygon.vertices, point] }, error: null }
+  return { ...state, polygon: { vertices: [...state.polygon.vertices, point] }, furnitureSession: initialFurnitureSession(), error: null }
 }
 
 function closePolygon(state: EditorState): EditorState {
@@ -123,6 +138,10 @@ function generateRoom(state: EditorState): EditorState {
 }
 
 export function editorReducer(state: EditorState, action: EditorAction): EditorState {
+  if (isFurnitureSessionAction(action)) {
+    const furnitureSession = reduceFurnitureSession(state.furnitureSession, action)
+    return furnitureSession === state.furnitureSession ? state : { ...state, furnitureSession }
+  }
   switch (action.type) {
     case 'floorPlanLoaded':
       // The height describes the room being modeled, not the image, so it survives a replacement.
@@ -131,7 +150,12 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
       return handleCanvasClick(state, action.point, action.isNearFirstVertex)
     case 'lastVertexRemoved':
       if (state.isClosed || state.polygon.vertices.length === 0) return state
-      return { ...state, polygon: { vertices: state.polygon.vertices.slice(0, -1) }, error: null }
+      return {
+        ...state,
+        polygon: { vertices: state.polygon.vertices.slice(0, -1) },
+        furnitureSession: initialFurnitureSession(),
+        error: null,
+      }
     case 'polygonCleared':
       return {
         ...state,
@@ -139,6 +163,7 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
         isClosed: false,
         calibration: initialCalibrationState,
         activeView: 'editor',
+        furnitureSession: initialFurnitureSession(),
         error: null,
       }
     case 'referenceEdgeSelected':
@@ -148,22 +173,29 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
       )
     case 'referenceLengthChanged':
       return withCalibration(state, changeReferenceLength(state.calibration, action.input))
-    case 'calibrationConfirmed':
-      return withCalibration(state, confirmCalibration(state.calibration, state.polygon.vertices))
+    case 'calibrationConfirmed': {
+      const next = withCalibration(state, confirmCalibration(state.calibration, state.polygon.vertices))
+      // A newly confirmed scale is a different room. Do not reuse old placements.
+      return next === state ? state : { ...next, furnitureSession: initialFurnitureSession() }
+    }
     case 'recalibrationStarted': {
       const next = withCalibration(state, startRecalibration(state.calibration))
-      return next === state ? state : { ...next, activeView: 'editor' }
+      return next === state ? state : { ...next, activeView: 'editor', furnitureSession: initialFurnitureSession() }
     }
-    case 'roomHeightChanged':
+    case 'roomHeightChanged': {
+      const heightIsValid = parseRoomHeight(action.input).ok
       return {
         ...state,
         roomHeightInput: action.input,
-        activeView: parseRoomHeight(action.input).ok ? state.activeView : 'editor',
+        activeView: heightIsValid ? state.activeView : 'editor',
+        furnitureSession: heightIsValid ? state.furnitureSession : interruptFurniturePlacement(state.furnitureSession),
       }
+    }
     case 'roomGenerated':
       return generateRoom(state)
     case 'editorReturned':
-      return state.activeView === 'editor' ? state : { ...state, activeView: 'editor' }
+      if (state.activeView === 'editor') return state
+      return { ...state, activeView: 'editor', furnitureSession: interruptFurniturePlacement(state.furnitureSession) }
     case 'errorRaised':
       return { ...state, error: action.error }
     case 'errorDismissed':

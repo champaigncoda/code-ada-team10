@@ -1,5 +1,6 @@
-import { useReducer, useRef } from 'react'
+import { useCallback, useReducer, useRef } from 'react'
 import type { Point2D } from '../../types/geometry'
+import type { FurnitureSessionAction } from '../furniture/session/furnitureSession'
 import { editorReducer, initialEditorState } from './editorReducer'
 import { loadFloorPlanImage } from './loadFloorPlanImage'
 
@@ -20,8 +21,13 @@ export function useFloorPlanEditor() {
     dispatch({ type: 'floorPlanLoaded', floorPlan: result.floorPlan })
   }
 
+  const applyFurniture = useCallback((action: FurnitureSessionAction) => {
+    dispatch(action)
+  }, [])
+
   return {
     state,
+    applyFurniture,
     uploadFile,
     clickCanvas: (point: Point2D, isNearFirstVertex: boolean) =>
       dispatch({ type: 'canvasClicked', point, isNearFirstVertex }),

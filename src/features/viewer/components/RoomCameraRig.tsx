@@ -10,9 +10,11 @@ interface RoomCameraRigProps {
   readonly extent: RoomExtent
   /** Increment to snap the camera back to the computed initial view. */
   readonly resetToken: number
+  /** Placement mode turns orbit, pan, and zoom off until it ends or the view unmounts. */
+  readonly enabled?: boolean
 }
 
-export function RoomCameraRig({ extent, resetToken }: RoomCameraRigProps) {
+export function RoomCameraRig({ extent, resetToken, enabled = true }: RoomCameraRigProps) {
   const camera = useThree((state) => state.camera)
   const aspect = useThree((state) => state.size.width / Math.max(state.size.height, 1))
   const controlsRef = useRef<OrbitControlsImpl | null>(null)
@@ -26,9 +28,10 @@ export function RoomCameraRig({ extent, resetToken }: RoomCameraRigProps) {
     <OrbitControls
       ref={controlsRef}
       makeDefault
-      enablePan
-      enableZoom
-      enableRotate
+      enabled={enabled}
+      enablePan={enabled}
+      enableZoom={enabled}
+      enableRotate={enabled}
       minDistance={view.minDistance}
       maxDistance={view.maxDistance}
       target={[view.target.x, view.target.y, view.target.z]}

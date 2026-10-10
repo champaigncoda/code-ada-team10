@@ -43,9 +43,19 @@ export interface FurnitureLayout {
   readonly parts: readonly FurniturePart[]
 }
 
-/** Future Phase 5 placement. Not used for preview. */
-export interface FurniturePlacement {
-  readonly x: number
-  readonly z: number
+/**
+ * One placed piece. `category` is the furniture type. Position is the model's
+ * bottom-center on the floor, in the same meters as the room. Rotation is
+ * radians around Y; Phase 5A always stores 0 until rotation is edited later.
+ */
+export interface FurnitureInstance {
+  readonly id: string
+  readonly category: FurnitureCategory
+  readonly dimensions: FurnitureDimensions
+  readonly color: FurnitureColor
+  readonly position: {
+    readonly x: number
+    readonly z: number
+  }
   readonly rotationY: number
 }

@@ -9,33 +9,36 @@ import type { FurnitureDraft } from '../furnitureConfig'
 import { describeUnbuildableFurniture, parseFurnitureDimension } from '../furnitureConfig'
 import './FurnitureConfigPanel.css'
 
-interface FurnitureConfigPanelProps {
-  readonly draft: FurnitureDraft
-  readonly onCategoryChange: (category: FurnitureCategory) => void
-  readonly onDimensionChange: (axis: FurnitureDimensionAxis, input: string) => void
-  readonly onColorChange: (color: string) => void
-}
-
 const AXES: readonly { readonly axis: FurnitureDimensionAxis; readonly label: string }[] = [
   { axis: 'width', label: 'Width' },
   { axis: 'depth', label: 'Depth' },
   { axis: 'height', label: 'Height' },
 ]
 
-export function FurnitureConfigPanel({
+interface FurnitureConfigFieldsProps {
+  readonly draft: FurnitureDraft
+  readonly onCategoryChange: (category: FurnitureCategory) => void
+  readonly onDimensionChange: (axis: FurnitureDimensionAxis, input: string) => void
+  readonly onColorChange: (color: string) => void
+  /** Edit mode shows the category as text; creation still offers the three buttons. */
+  readonly showCategory?: boolean
+}
+
+export function FurnitureConfigFields({
   draft,
   onCategoryChange,
   onDimensionChange,
   onColorChange,
-}: FurnitureConfigPanelProps) {
+  showCategory = true,
+}: FurnitureConfigFieldsProps) {
   const colorPickerId = useId()
   const inputs = { width: draft.widthInput, depth: draft.depthInput, height: draft.heightInput }
   const geometryMessage = describeUnbuildableFurniture(draft)
 
   return (
-    <aside className="furniture-panel" aria-label="Furniture configuration">
-      <h2 className="furniture-panel__title">Furniture</h2>
-      <div className="furniture-categories" role="group" aria-label="Furniture category">
+    <>
+      {showCategory ? (
+        <div className="furniture-categories" role="group" aria-label="Furniture category">
         {FURNITURE_CATEGORIES.map((category) => (
           <button
             key={category}
@@ -47,7 +50,8 @@ export function FurnitureConfigPanel({
             {FURNITURE_CATEGORY_LABELS[category]}
           </button>
         ))}
-      </div>
+        </div>
+      ) : null}
 
       {AXES.map(({ axis, label }) => {
         const inputId = `${colorPickerId}-${axis}`
@@ -113,6 +117,25 @@ export function FurnitureConfigPanel({
           <span className="furniture-custom-color__value">{draft.color}</span>
         </div>
       </fieldset>
+    </>
+  )
+}
+
+export function FurnitureConfigPanel({
+  draft,
+  onCategoryChange,
+  onDimensionChange,
+  onColorChange,
+}: FurnitureConfigFieldsProps) {
+  return (
+    <aside className="furniture-panel" aria-label="Furniture configuration">
+      <h2 className="furniture-panel__title">Furniture</h2>
+      <FurnitureConfigFields
+        draft={draft}
+        onCategoryChange={onCategoryChange}
+        onDimensionChange={onDimensionChange}
+        onColorChange={onColorChange}
+      />
     </aside>
   )
 }

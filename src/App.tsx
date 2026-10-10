@@ -1,35 +1,39 @@
 import { useState } from 'react'
 import './App.css'
-import { type AppWorkspace, WORKSPACE_LABELS } from './features/app/workspace'
+import { isFurnitureStudioRequested } from './features/app/workspace'
 import { FloorPlanEditor } from './features/editor/FloorPlanEditor'
 import { FurnitureStudio } from './features/furniture/components/FurnitureStudio'
 
 function App() {
-  const [workspace, setWorkspace] = useState<AppWorkspace>('room')
+  const [studioOpen, setStudioOpen] = useState(() => isFurnitureStudioRequested(window.location))
+
+  function setStudio(open: boolean) {
+    const url = new URL(window.location.href)
+    if (open) {
+      url.searchParams.set('studio', 'furniture')
+    } else {
+      url.searchParams.delete('studio')
+      if (url.hash === '#furniture-studio') url.hash = ''
+    }
+    window.history.replaceState({}, '', url)
+    setStudioOpen(open)
+  }
 
   return (
     <div className="app">
       <header className="app-header">
         <h1>Room Designer</h1>
-        <nav className="app-nav" aria-label="Workspace">
-          {(['room', 'furniture'] as const).map((item) => (
-            <button
-              key={item}
-              type="button"
-              className={`app-nav__button${workspace === item ? ' app-nav__button--current' : ''}`}
-              aria-current={workspace === item ? 'page' : undefined}
-              onClick={() => setWorkspace(item)}
-            >
-              {WORKSPACE_LABELS[item]}
-            </button>
-          ))}
-        </nav>
+        {studioOpen && (
+          <button type="button" className="button button--secondary" onClick={() => setStudio(false)}>
+            Back to room
+          </button>
+        )}
       </header>
       <main className="app-main">
-        <div hidden={workspace !== 'room'}>
-          <FloorPlanEditor onOpenFurniture={() => setWorkspace('furniture')} />
+        <div hidden={studioOpen}>
+          <FloorPlanEditor />
         </div>
-        {workspace === 'furniture' && <FurnitureStudio />}
+        {studioOpen && <FurnitureStudio />}
       </main>
     </div>
   )

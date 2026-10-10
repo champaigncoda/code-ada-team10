@@ -8,7 +8,6 @@ interface EditorToolbarProps {
   readonly onFileSelected: (file: File) => void
   readonly onUndo: () => void
   readonly onClear: () => void
-  readonly onOpenFurniture?: () => void
 }
 
 export function EditorToolbar({
@@ -18,7 +17,6 @@ export function EditorToolbar({
   onFileSelected,
   onUndo,
   onClear,
-  onOpenFurniture,
 }: EditorToolbarProps) {
   return (
     <div className="editor-toolbar">
@@ -38,11 +36,6 @@ export function EditorToolbar({
           Clear polygon
         </button>
         <ImageFileButton label="Upload different image" variant="secondary" onFileSelected={onFileSelected} />
-        {onOpenFurniture && (
-          <button type="button" className="button button--secondary" onClick={onOpenFurniture}>
-            Preview furniture
-          </button>
-        )}
       </div>
     </div>
   )
