@@ -16,7 +16,11 @@ import {
 import './FloorPlanEditor.css'
 import { useFloorPlanEditor } from './useFloorPlanEditor'
 
-export function FloorPlanEditor() {
+interface FloorPlanEditorProps {
+  readonly onOpenFurniture?: () => void
+}
+
+export function FloorPlanEditor({ onOpenFurniture }: FloorPlanEditorProps) {
   const editor = useFloorPlanEditor()
   const { floorPlan, polygon, isClosed, calibration, error, roomHeightInput, activeView } = editor.state
   const vertexCount = polygon.vertices.length
@@ -25,7 +29,13 @@ export function FloorPlanEditor() {
   const generatedSource = selectGeneratedRoomSource(editor.state)
 
   if (activeView === 'viewer' && generatedSource) {
-    return <RoomViewer source={generatedSource} onReturnToEditor={editor.returnToEditor} />
+    return (
+      <RoomViewer
+        source={generatedSource}
+        onReturnToEditor={editor.returnToEditor}
+        onOpenFurniture={onOpenFurniture}
+      />
+    )
   }
 
   const canvasFrame = (
@@ -60,6 +70,7 @@ export function FloorPlanEditor() {
             onFileSelected={editor.uploadFile}
             onUndo={editor.undoLastVertex}
             onClear={editor.clearPolygon}
+            onOpenFurniture={onOpenFurniture}
           />
           <EditorStatus
             vertexCount={vertexCount}
