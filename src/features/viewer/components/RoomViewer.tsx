@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { RoomModelSource } from '../../../types/room'
 import { formatMeters } from '../../calibration/scale'
 import { PLACEMENT_INSTRUCTION, orbitControlsEnabled, type FurnitureSession, type FurnitureSessionAction } from '../../furniture/session/furnitureSession'
+import { validateFurnitureLayout } from '../../spatial/spatialWarnings'
 import { VIEWER_FOV_DEGREES } from '../camera/cameraView'
 import { buildRoomGeometry } from '../geometry/roomGeometry'
 import { VIEWER_BACKGROUND } from '../materials'
@@ -24,6 +25,11 @@ export function RoomViewer({ source, session, onAction, onReturnToEditor }: Room
   const [resetToken, setResetToken] = useState(0)
   const [topToken, setTopToken] = useState(0)
   const geometry = useMemo(() => buildRoomGeometry(source), [source])
+  // Derived from the instances the meshes already use. Not an input to the camera rig.
+  const spatial = useMemo(
+    () => validateFurnitureLayout(session.instances, geometry?.footprint ?? []),
+    [geometry, session.instances],
+  )
   const placing = session.mode.kind === 'placement'
 
   useEffect(() => {
@@ -69,7 +75,7 @@ export function RoomViewer({ source, session, onAction, onReturnToEditor }: Room
         onReturnToEditor={onReturnToEditor}
       />
       <div className="room-viewer__columns">
-        <FurnitureList session={session} onAction={onAction} />
+        <FurnitureList session={session} validation={spatial} onAction={onAction} />
         <div className="room-viewer__stage">
           <p className="room-viewer__summary">
             {wallCount} walls · height {formatMeters(geometry.heightMeters)} · floor{' '}
@@ -88,6 +94,7 @@ export function RoomViewer({ source, session, onAction, onReturnToEditor }: Room
                 resetToken={resetToken}
                 topToken={topToken}
                 session={session}
+                validation={spatial}
                 onAction={onAction}
               />
             </Canvas>
@@ -103,6 +110,7 @@ export function RoomViewer({ source, session, onAction, onReturnToEditor }: Room
             heightMeters: geometry.heightMeters,
             floorAreaSquareMeters: geometry.floorAreaSquareMeters,
           }}
+          validation={spatial}
           onAction={onAction}
         />
       </div>

@@ -13,6 +13,8 @@ import {
   type FurnitureSession,
   type FurnitureSessionAction,
 } from '../../furniture/session/furnitureSession'
+import type { SpatialValidation } from '../../spatial/spatialWarnings'
+import { SpatialWarningsPanel } from './SpatialWarningsPanel'
 
 interface RoomSummary {
   readonly wallCount: number
@@ -23,10 +25,11 @@ interface RoomSummary {
 interface FurnitureDetailsProps {
   readonly session: FurnitureSession
   readonly room: RoomSummary | null
+  readonly validation: SpatialValidation
   readonly onAction: (action: FurnitureSessionAction) => void
 }
 
-export function FurnitureDetails({ session, room, onAction }: FurnitureDetailsProps) {
+export function FurnitureDetails({ session, room, validation, onAction }: FurnitureDetailsProps) {
   const { mode } = session
   const draft = mode.kind === 'default' ? null : mode.draft
   const layout = useMemo(() => {
@@ -101,7 +104,7 @@ export function FurnitureDetails({ session, room, onAction }: FurnitureDetailsPr
           </>
         )}
         {mode.kind === 'edit' && draft && (
-          <EditDetails session={session} onAction={onAction} />
+          <EditDetails session={session} validation={validation} onAction={onAction} />
         )}
       </div>
     </aside>
@@ -110,9 +113,11 @@ export function FurnitureDetails({ session, room, onAction }: FurnitureDetailsPr
 
 function EditDetails({
   session,
+  validation,
   onAction,
 }: {
   readonly session: FurnitureSession
+  readonly validation: SpatialValidation
   readonly onAction: (action: FurnitureSessionAction) => void
 }) {
   if (session.mode.kind !== 'edit') return null
@@ -123,6 +128,7 @@ function EditDetails({
     <>
       <p className="furniture-details__name">{furnitureDisplayName(session.instances, instance.id)}</p>
       <p className="furniture-details__room">{FURNITURE_CATEGORY_LABELS[instance.category]}</p>
+      <SpatialWarningsPanel instances={session.instances} furnitureId={instance.id} validation={validation} />
       <FurnitureConfigFields
         draft={draft}
         showCategory={false}
