@@ -2,6 +2,8 @@ import type { FurnitureConfig, FurnitureDimensions, FurnitureLayout, FurniturePa
 import { FURNITURE_BOUNDS_TOLERANCE } from '../catalog'
 import { isFurnitureColor } from '../color'
 import { bedParts } from './bedLayout'
+import { cabinetParts } from './cabinetLayout'
+import { chairParts } from './chairLayout'
 import { layoutBounds } from './parts'
 import { sofaParts } from './sofaLayout'
 import { tableParts } from './tableLayout'
@@ -35,9 +37,18 @@ function survivesFloat32(part: FurniturePart): boolean {
 }
 
 function partsFor(config: FurnitureConfig) {
-  if (config.category === 'sofa') return sofaParts(config.dimensions)
-  if (config.category === 'bed') return bedParts(config.dimensions)
-  return tableParts(config.dimensions)
+  switch (config.category) {
+    case 'sofa':
+      return sofaParts(config.dimensions)
+    case 'bed':
+      return bedParts(config.dimensions)
+    case 'table':
+      return tableParts(config.dimensions)
+    case 'chair':
+      return chairParts(config.dimensions)
+    case 'cabinet':
+      return cabinetParts(config.dimensions)
+  }
 }
 
 function matches(actual: number, expected: number): boolean {

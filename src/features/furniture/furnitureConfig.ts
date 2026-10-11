@@ -11,6 +11,7 @@ import {
   DEFAULT_FURNITURE_COLOR,
   FURNITURE_CATEGORY_LABELS,
   FURNITURE_DEFAULTS,
+  defaultColorFor,
 } from './catalog'
 import { normalizeFurnitureColor } from './color'
 import { buildFurnitureLayout } from './layout/buildFurnitureLayout'
@@ -37,23 +38,22 @@ export function createFurnitureId(): string {
   return `furn-${crypto.randomUUID()}`
 }
 
-export function draftFromDefaults(
-  category: FurnitureCategory = DEFAULT_FURNITURE_CATEGORY,
-  color: FurnitureColor = DEFAULT_FURNITURE_COLOR,
-): FurnitureDraft {
+export function draftFromDefaults(category: FurnitureCategory = DEFAULT_FURNITURE_CATEGORY, color?: FurnitureColor): FurnitureDraft {
   const defaults = FURNITURE_DEFAULTS[category]
+  const resolved = color ?? defaultColorFor(category)
   return {
     category,
     widthInput: String(defaults.width),
     depthInput: String(defaults.depth),
     heightInput: String(defaults.height),
-    color: normalizeFurnitureColor(color) ?? DEFAULT_FURNITURE_COLOR,
+    color: normalizeFurnitureColor(resolved) ?? defaultColorFor(category),
   }
 }
 
 export function changeFurnitureCategory(draft: FurnitureDraft, category: FurnitureCategory): FurnitureDraft {
   if (draft.category === category) return draft
-  return draftFromDefaults(category, draft.color)
+  const color = draft.color === defaultColorFor(draft.category) ? defaultColorFor(category) : draft.color
+  return draftFromDefaults(category, color)
 }
 
 export function changeFurnitureDimension(

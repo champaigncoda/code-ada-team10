@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { FURNITURE_DEFAULTS } from './catalog'
+import {
+  CABINET_COLOR_PRESETS,
+  CHAIR_COLOR_PRESETS,
+  DEFAULT_FURNITURE_COLOR,
+  FURNITURE_COLOR_PRESETS,
+  FURNITURE_DEFAULTS,
+  colorPresetsFor,
+  defaultColorFor,
+} from './catalog'
 import {
   changeFurnitureCategory,
+  changeFurnitureColor,
   changeFurnitureDimension,
   createFurnitureConfig,
   describeUnbuildableFurniture,
@@ -100,6 +109,49 @@ describe('furniture configuration', () => {
     const next = resolveFurniturePreview(restored, last)
     expect(next.dimensions.height).toBe(0.8)
     expect(buildFurnitureLayout(next)?.dimensions.height).toBe(0.8)
+  })
+})
+
+describe('category color presets', () => {
+  const hex = /^#[0-9a-f]{6}$/
+
+  it.each([
+    ['sofa', FURNITURE_COLOR_PRESETS],
+    ['bed', FURNITURE_COLOR_PRESETS],
+    ['table', FURNITURE_COLOR_PRESETS],
+    ['chair', CHAIR_COLOR_PRESETS],
+    ['cabinet', CABINET_COLOR_PRESETS],
+  ] as const)('returns the %s swatches as lowercase hex', (category, presets) => {
+    expect(colorPresetsFor(category)).toEqual(presets)
+    for (const preset of presets) expect(preset.value).toMatch(hex)
+  })
+
+  it('uses the first swatch as the chair and cabinet default', () => {
+    expect(defaultColorFor('chair')).toBe('#e3cba5')
+    expect(defaultColorFor('cabinet')).toBe('#f5f5f2')
+    expect(draftFromDefaults('chair').color).toBe('#e3cba5')
+    expect(draftFromDefaults('cabinet').color).toBe('#f5f5f2')
+    expect(defaultColorFor('sofa')).toBe(DEFAULT_FURNITURE_COLOR)
+    expect(defaultColorFor('bed')).toBe(DEFAULT_FURNITURE_COLOR)
+    expect(defaultColorFor('table')).toBe(DEFAULT_FURNITURE_COLOR)
+  })
+
+  it('replaces a category default on switch and keeps a color the user already chose', () => {
+    const chair = changeFurnitureCategory(draftFromDefaults('sofa'), 'chair')
+    expect(chair.color).toBe('#e3cba5')
+    expect(parseFurnitureDraft(chair)?.dimensions).toEqual(FURNITURE_DEFAULTS.chair)
+
+    const kept = changeFurnitureCategory(draftFromDefaults('sofa', '#2c3d5a'), 'chair')
+    expect(kept.color).toBe('#2c3d5a')
+
+    const cabinet = changeFurnitureCategory(draftFromDefaults('chair'), 'cabinet')
+    expect(cabinet.color).toBe('#f5f5f2')
+
+    const custom = changeFurnitureCategory(changeFurnitureColor(draftFromDefaults('cabinet'), '#112233'), 'chair')
+    expect(custom.color).toBe('#112233')
+
+    const shared = changeFurnitureCategory(draftFromDefaults('sofa'), 'bed')
+    expect(shared.color).toBe(DEFAULT_FURNITURE_COLOR)
   })
 })
 

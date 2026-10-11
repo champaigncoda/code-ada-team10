@@ -1,10 +1,6 @@
 import { useId } from 'react'
 import type { FurnitureCategory, FurnitureDimensionAxis } from '../../../types/furniture'
-import {
-  FURNITURE_CATEGORIES,
-  FURNITURE_CATEGORY_LABELS,
-  FURNITURE_COLOR_PRESETS,
-} from '../catalog'
+import { FURNITURE_CATEGORIES, FURNITURE_CATEGORY_LABELS, colorPresetsFor } from '../catalog'
 import type { FurnitureDraft } from '../furnitureConfig'
 import { describeUnbuildableFurniture, parseFurnitureDimension } from '../furnitureConfig'
 import './FurnitureConfigPanel.css'
@@ -20,7 +16,7 @@ interface FurnitureConfigFieldsProps {
   readonly onCategoryChange: (category: FurnitureCategory) => void
   readonly onDimensionChange: (axis: FurnitureDimensionAxis, input: string) => void
   readonly onColorChange: (color: string) => void
-  /** Edit mode shows the category as text; creation still offers the three buttons. */
+  /** Edit mode shows the category as text; creation still offers every category button. */
   readonly showCategory?: boolean
 }
 
@@ -94,7 +90,7 @@ export function FurnitureConfigFields({
       <fieldset className="furniture-colors">
         <legend>Color</legend>
         <div className="furniture-swatches">
-          {FURNITURE_COLOR_PRESETS.map((preset) => (
+          {colorPresetsFor(draft.category).map((preset) => (
             <button
               key={preset.value}
               type="button"

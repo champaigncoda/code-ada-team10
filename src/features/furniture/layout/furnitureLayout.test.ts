@@ -178,6 +178,44 @@ function boxesOverlap(
   )
 }
 
+describe('chair and cabinet', () => {
+  it.each([
+    ['chair', { width: 0.22, depth: 0.24, height: 0.28 }, { width: 1.2, depth: 1.1, height: 1.4 }],
+    ['cabinet', { width: 0.28, depth: 0.16, height: 0.4 }, { width: 3, depth: 1.2, height: 2.4 }],
+  ] as const)('builds a valid %s at the default, minimum, and maximum sizes', (category, small, large) => {
+    expectValidLayout(category, FURNITURE_DEFAULTS[category])
+    expectValidLayout(category, small)
+    expectValidLayout(category, large)
+  })
+
+  it('keeps the chair seat near 45 cm and runs the backrest up to the full height', () => {
+    const layout = expectValidLayout('chair', FURNITURE_DEFAULTS.chair)
+    const seat = layout?.parts.find((part) => part.name === 'seat')
+    const backrest = layout?.parts.find((part) => part.name === 'backrest')
+    const legs = layout?.parts.filter((part) => part.name.startsWith('leg-'))
+    expect(seat && backrest && legs?.length).toBeTruthy()
+    if (!seat || !backrest || !legs) return
+    expect(seat.center.y + seat.size.y / 2).toBeCloseTo(0.45, 2)
+    expect(backrest.center.y + backrest.size.y / 2).toBeCloseTo(FURNITURE_DEFAULTS.chair.height, 9)
+    expect(legs).toHaveLength(4)
+    for (const leg of legs) {
+      expect(leg.center.y - leg.size.y / 2).toBeCloseTo(0, 9)
+    }
+  })
+
+  it('uses drawers at 1.2 m and two doors above that', () => {
+    const dresser = expectValidLayout('cabinet', { width: 0.8, depth: 0.45, height: 1.2 })
+    const wardrobe = expectValidLayout('cabinet', { width: 0.8, depth: 0.45, height: 1.21 })
+    const drawerNames = dresser?.parts.filter((part) => part.name.startsWith('drawer-')).map((part) => part.name) ?? []
+    const doorNames = wardrobe?.parts.filter((part) => part.name.startsWith('door-')).map((part) => part.name) ?? []
+    expect(drawerNames.length).toBeGreaterThanOrEqual(2)
+    expect(dresser?.parts.some((part) => part.name.startsWith('door-'))).toBe(false)
+    expect(doorNames).toEqual(['door-left', 'door-right'])
+    expect(wardrobe?.parts.some((part) => part.name.startsWith('drawer-'))).toBe(false)
+    expect(wardrobe?.parts.filter((part) => part.name.startsWith('handle-door-'))).toHaveLength(2)
+  })
+})
+
 describe('grounding and origin', () => {
   it('rests every category on y = 0 and centers it on x and z', () => {
     for (const category of ['sofa', 'bed', 'table'] as const) {

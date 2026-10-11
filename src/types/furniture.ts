@@ -1,6 +1,6 @@
 import type { Point3D } from './room'
 
-export type FurnitureCategory = 'sofa' | 'bed' | 'table'
+export type FurnitureCategory = 'sofa' | 'bed' | 'table' | 'chair' | 'cabinet'
 
 export type FurnitureDimensionAxis = 'width' | 'depth' | 'height'
 
