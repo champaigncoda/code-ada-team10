@@ -1,7 +1,8 @@
 import { Canvas } from '@react-three/fiber'
 import { useEffect, useMemo, useState } from 'react'
-import type { RoomModelSource } from '../../../types/room'
+import type { RoomAppearance, RoomModelSource, RoomSurface } from '../../../types/room'
 import { formatMeters } from '../../calibration/scale'
+import { RoomColorsPanel } from '../../room/components/RoomColorsPanel'
 import { PLACEMENT_INSTRUCTION, orbitControlsEnabled, type FurnitureSession, type FurnitureSessionAction } from '../../furniture/session/furnitureSession'
 import { VIEWER_FOV_DEGREES } from '../camera/cameraView'
 import { buildRoomGeometry } from '../geometry/roomGeometry'
@@ -15,11 +16,20 @@ import './RoomViewer.css'
 interface RoomViewerProps {
   readonly source: RoomModelSource
   readonly session: FurnitureSession
+  readonly appearance: RoomAppearance
   readonly onAction: (action: FurnitureSessionAction) => void
+  readonly onRoomColorChange: (surface: RoomSurface, color: string) => void
   readonly onReturnToEditor: () => void
 }
 
-export function RoomViewer({ source, session, onAction, onReturnToEditor }: RoomViewerProps) {
+export function RoomViewer({
+  source,
+  session,
+  appearance,
+  onAction,
+  onRoomColorChange,
+  onReturnToEditor,
+}: RoomViewerProps) {
   const [showWalls, setShowWalls] = useState(true)
   const [resetToken, setResetToken] = useState(0)
   const [topToken, setTopToken] = useState(0)
@@ -85,6 +95,7 @@ export function RoomViewer({ source, session, onAction, onReturnToEditor }: Room
               <RoomScene
                 geometry={geometry}
                 showWalls={showWalls}
+                appearance={appearance}
                 resetToken={resetToken}
                 topToken={topToken}
                 session={session}
@@ -103,6 +114,7 @@ export function RoomViewer({ source, session, onAction, onReturnToEditor }: Room
             heightMeters: geometry.heightMeters,
             floorAreaSquareMeters: geometry.floorAreaSquareMeters,
           }}
+          roomControls={<RoomColorsPanel appearance={appearance} onColorChange={onRoomColorChange} />}
           onAction={onAction}
         />
       </div>

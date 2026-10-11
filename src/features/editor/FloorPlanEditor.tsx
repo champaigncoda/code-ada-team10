@@ -29,7 +29,9 @@ export function FloorPlanEditor() {
       <RoomViewer
         source={generatedSource}
         session={editor.state.furnitureSession}
+        appearance={editor.state.roomAppearance}
         onAction={editor.applyFurniture}
+        onRoomColorChange={editor.changeRoomColor}
         onReturnToEditor={editor.returnToEditor}
       />
     )
