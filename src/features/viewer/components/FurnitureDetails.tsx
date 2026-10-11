@@ -1,14 +1,16 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useId, useMemo, useState, type ReactNode } from 'react'
 import { formatMeters } from '../../calibration/scale'
 import { FURNITURE_CATEGORY_LABELS } from '../../furniture/catalog'
 import { FurnitureConfigFields } from '../../furniture/components/FurnitureConfigPanel'
 import { FurniturePreviewCanvas } from '../../furniture/components/FurniturePreviewCanvas'
-import { createFurnitureId, parseFurnitureDraft } from '../../furniture/furnitureConfig'
+import { FURNITURE_CUSTOM_NAME_MAX, createFurnitureId, parseCustomName, parseFurnitureDraft } from '../../furniture/furnitureConfig'
 import { buildFurnitureLayout } from '../../furniture/layout/buildFurnitureLayout'
 import { ROTATION_SHORTCUTS_DEGREES } from '../../furniture/interaction/transformMath'
 import {
   PLACEMENT_INSTRUCTION,
+  furnitureAutomaticName,
   furnitureDisplayName,
+  nextAutomaticName,
   selectedFurniture,
   type FurnitureSession,
   type FurnitureSessionAction,
@@ -59,6 +61,13 @@ export function FurnitureDetails({ session, room, validation, roomControls, onAc
         )}
         {mode.kind === 'create' && draft && (
           <>
+            <FurnitureNameField
+              value={draft.nameInput}
+              placeholder={nextAutomaticName(session.instances, draft.category)}
+              showReset={hasSavableName(draft.nameInput)}
+              onChange={(input) => onAction({ type: 'furnitureNameChanged', input })}
+              onReset={() => onAction({ type: 'furnitureNameReset' })}
+            />
             <FurnitureConfigFields
               draft={draft}
               onCategoryChange={(category) => onAction({ type: 'furnitureCategoryChanged', category })}
@@ -114,6 +123,59 @@ export function FurnitureDetails({ session, room, validation, roomControls, onAc
   )
 }
 
+function hasSavableName(input: string): boolean {
+  const parsed = parseCustomName(input)
+  return parsed.ok && parsed.name !== undefined
+}
+
+function FurnitureNameField({
+  value,
+  placeholder,
+  showReset,
+  onChange,
+  onReset,
+}: {
+  readonly value: string
+  readonly placeholder: string
+  readonly showReset: boolean
+  readonly onChange: (input: string) => void
+  readonly onReset: () => void
+}) {
+  const inputId = useId()
+  const messageId = `${inputId}-message`
+  const tooLong = value.trim().length > FURNITURE_CUSTOM_NAME_MAX
+  return (
+    <div className="furniture-field">
+      <label htmlFor={inputId} className="furniture-field__label">
+        Name
+      </label>
+      <div className="furniture-name__row">
+        <div className="length-input">
+          <input
+            id={inputId}
+            type="text"
+            value={value}
+            placeholder={placeholder}
+            aria-invalid={tooLong}
+            aria-describedby={tooLong ? messageId : undefined}
+            onChange={(event) => onChange(event.target.value)}
+          />
+        </div>
+        {showReset && (
+          <button type="button" className="button button--secondary button--small" onClick={onReset}>
+            Reset
+          </button>
+        )}
+      </div>
+      {tooLong && (
+        <p id={messageId} className="furniture-field__message furniture-field__message--error">
+          Name must be 40 characters or fewer.
+        </p>
+      )}
+    </div>
+  )
+}
+
 function EditDetails({
   session,
   validation,
@@ -131,6 +193,13 @@ function EditDetails({
     <>
       <p className="furniture-details__name">{furnitureDisplayName(session.instances, instance.id)}</p>
       <p className="furniture-details__room">{FURNITURE_CATEGORY_LABELS[instance.category]}</p>
+      <FurnitureNameField
+        value={draft.nameInput}
+        placeholder={furnitureAutomaticName(session.instances, instance.id)}
+        showReset={instance.customName !== undefined}
+        onChange={(input) => onAction({ type: 'furnitureNameChanged', input })}
+        onReset={() => onAction({ type: 'furnitureNameReset' })}
+      />
       <SpatialWarningsPanel instances={session.instances} furnitureId={instance.id} validation={validation} />
       <FurnitureConfigFields
         draft={draft}

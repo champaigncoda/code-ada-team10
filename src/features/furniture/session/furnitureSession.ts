@@ -5,7 +5,10 @@ import {
   changeFurnitureCategory,
   changeFurnitureColor,
   changeFurnitureDimension,
+  changeFurnitureName,
   draftFromDefaults,
+  duplicateCustomName,
+  parseCustomName,
   parseFurnitureDraft,
   type FurnitureDraft,
 } from '../furnitureConfig'
@@ -58,6 +61,8 @@ export type FurnitureSessionAction =
   | { readonly type: 'furnitureCategoryChanged'; readonly category: FurnitureCategory }
   | { readonly type: 'furnitureDimensionChanged'; readonly axis: FurnitureDimensionAxis; readonly input: string }
   | { readonly type: 'furnitureColorChanged'; readonly color: string }
+  | { readonly type: 'furnitureNameChanged'; readonly input: string }
+  | { readonly type: 'furnitureNameReset' }
   | { readonly type: 'furniturePlacementStarted' }
   | { readonly type: 'furniturePreviewMoved'; readonly position: FloorPoint | null }
   | {
@@ -83,6 +88,8 @@ const FURNITURE_ACTION_TYPES: ReadonlySet<FurnitureSessionAction['type']> = new 
   'furnitureCategoryChanged',
   'furnitureDimensionChanged',
   'furnitureColorChanged',
+  'furnitureNameChanged',
+  'furnitureNameReset',
   'furniturePlacementStarted',
   'furniturePreviewMoved',
   'furniturePlacementAttempted',
@@ -116,12 +123,25 @@ export function selectedFurniture(session: FurnitureSession): FurnitureInstance 
   return session.instances.find((instance) => instance.id === mode.selectedId) ?? null
 }
 
-/** "Sofa 1" follows insertion order among items of the same category. */
-export function furnitureDisplayName(instances: readonly FurnitureInstance[], id: string): string {
+/** "Sofa 1" follows insertion order among items of the same category, including named items. */
+export function furnitureAutomaticName(instances: readonly FurnitureInstance[], id: string): string {
   const item = instances.find((instance) => instance.id === id)
   if (!item) return ''
   const index = instances.filter((instance) => instance.category === item.category).findIndex((instance) => instance.id === id)
   return `${FURNITURE_CATEGORY_LABELS[item.category]} ${index + 1}`
+}
+
+/** The label this category would get if placed next, based on items already in the room. */
+export function nextAutomaticName(instances: readonly FurnitureInstance[], category: FurnitureInstance['category']): string {
+  const count = instances.filter((instance) => instance.category === category).length
+  return `${FURNITURE_CATEGORY_LABELS[category]} ${count + 1}`
+}
+
+/** Custom name when one is saved; otherwise the automatic "Sofa 1" label. */
+export function furnitureDisplayName(instances: readonly FurnitureInstance[], id: string): string {
+  const item = instances.find((instance) => instance.id === id)
+  if (!item) return ''
+  return item.customName ?? furnitureAutomaticName(instances, id)
 }
 
 export function transformFromInstance(instance: FurnitureInstance): TransformDraft {
@@ -153,6 +173,7 @@ export function draftFromInstance(instance: FurnitureInstance): FurnitureDraft {
     depthInput: String(instance.dimensions.depth),
     heightInput: String(instance.dimensions.height),
     color: instance.color,
+    nameInput: instance.customName ?? '',
   }
 }
 
@@ -230,6 +251,10 @@ export function reduceFurnitureSession(session: FurnitureSession, action: Furnit
       if (session.mode.kind === 'default' || session.mode.kind === 'placement') return session
       return withDraft(session, changeFurnitureColor(session.mode.draft, action.color))
     }
+    case 'furnitureNameChanged':
+      return changeName(session, action.input)
+    case 'furnitureNameReset':
+      return changeName(session, '')
     case 'furniturePlacementStarted': {
       if (session.mode.kind !== 'create') return session
       const parsed = parseFurnitureDraft(session.mode.draft)
@@ -245,6 +270,7 @@ export function reduceFurnitureSession(session: FurnitureSession, action: Furnit
       const parsed = parseFurnitureDraft(session.mode.draft)
       if (!parsed || !buildFurnitureLayout({ ...parsed, id: action.id })) return session
       if (session.instances.some((instance) => instance.id === action.id)) return session
+      const named = parseCustomName(session.mode.draft.nameInput)
       const instance: FurnitureInstance = {
         id: action.id,
         category: parsed.category,
@@ -252,6 +278,7 @@ export function reduceFurnitureSession(session: FurnitureSession, action: Furnit
         color: parsed.color,
         position: { x: action.position.x, z: action.position.z },
         rotationY: 0,
+        ...(named.ok && named.name ? { customName: named.name } : {}),
       }
       return {
         instances: [...session.instances, instance],
@@ -282,6 +309,7 @@ export function reduceFurnitureSession(session: FurnitureSession, action: Furnit
         color: source.color,
         position: { x: source.position.x + FURNITURE_DUPLICATE_OFFSET_X, z: source.position.z },
         rotationY: source.rotationY,
+        ...(source.customName ? { customName: duplicateCustomName(source.customName) } : {}),
       }
       return {
         instances: [...session.instances, copy],
@@ -307,6 +335,37 @@ export function reduceFurnitureSession(session: FurnitureSession, action: Furnit
     case 'furnitureRotationShortcut':
       return commitTransform(session, selectedIdOf(session), { rotationY: degreesToRadians(action.degrees) })
   }
+}
+
+function changeName(session: FurnitureSession, input: string): FurnitureSession {
+  const { mode } = session
+  if (mode.kind !== 'create' && mode.kind !== 'placement' && mode.kind !== 'edit') return session
+  const draft = changeFurnitureName(mode.draft, input)
+  if (mode.kind !== 'edit') return { ...session, mode: { ...mode, draft } }
+  const parsed = parseCustomName(input)
+  if (!parsed.ok) return { ...session, mode: { ...mode, draft } }
+  return {
+    instances: session.instances.map((instance) =>
+      instance.id === mode.selectedId ? withCustomName(instance, parsed.name) : instance,
+    ),
+    mode: { ...mode, draft },
+  }
+}
+
+function withCustomName(instance: FurnitureInstance, name: string | undefined): FurnitureInstance {
+  if (name === undefined) {
+    if (instance.customName === undefined) return instance
+    return {
+      id: instance.id,
+      category: instance.category,
+      dimensions: instance.dimensions,
+      color: instance.color,
+      position: instance.position,
+      rotationY: instance.rotationY,
+    }
+  }
+  if (instance.customName === name) return instance
+  return { ...instance, customName: name }
 }
 
 function selectedIdOf(session: FurnitureSession): string | null {

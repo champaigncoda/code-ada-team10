@@ -16,12 +16,34 @@ import {
 import { normalizeFurnitureColor } from './color'
 import { buildFurnitureLayout } from './layout/buildFurnitureLayout'
 
+export const FURNITURE_CUSTOM_NAME_MAX = 40
+
 export interface FurnitureDraft {
   readonly category: FurnitureCategory
   readonly widthInput: string
   readonly depthInput: string
   readonly heightInput: string
   readonly color: FurnitureColor
+  /** Raw name field text. Empty means the automatic label. */
+  readonly nameInput: string
+}
+
+export type CustomNameParse = { readonly ok: true; readonly name: string | undefined } | { readonly ok: false; readonly tooLong: true }
+
+/** Empty or whitespace clears the name. More than 40 characters after trimming is rejected. */
+export function parseCustomName(input: string): CustomNameParse {
+  const trimmed = input.trim()
+  if (trimmed.length === 0) return { ok: true, name: undefined }
+  if (trimmed.length > FURNITURE_CUSTOM_NAME_MAX) return { ok: false, tooLong: true }
+  return { ok: true, name: trimmed }
+}
+
+/** "<name> (copy)", shortened so the whole label stays within 40 characters. */
+export function duplicateCustomName(name: string): string {
+  const suffix = ' (copy)'
+  if (name.length + suffix.length <= FURNITURE_CUSTOM_NAME_MAX) return `${name}${suffix}`
+  const base = name.slice(0, FURNITURE_CUSTOM_NAME_MAX - suffix.length).trimEnd()
+  return `${base}${suffix}`.trim()
 }
 
 export type FurnitureDimensionParseResult =
@@ -47,13 +69,18 @@ export function draftFromDefaults(category: FurnitureCategory = DEFAULT_FURNITUR
     depthInput: String(defaults.depth),
     heightInput: String(defaults.height),
     color: normalizeFurnitureColor(resolved) ?? defaultColorFor(category),
+    nameInput: '',
   }
 }
 
 export function changeFurnitureCategory(draft: FurnitureDraft, category: FurnitureCategory): FurnitureDraft {
   if (draft.category === category) return draft
   const color = draft.color === defaultColorFor(draft.category) ? defaultColorFor(category) : draft.color
-  return draftFromDefaults(category, color)
+  return { ...draftFromDefaults(category, color), nameInput: draft.nameInput }
+}
+
+export function changeFurnitureName(draft: FurnitureDraft, nameInput: string): FurnitureDraft {
+  return { ...draft, nameInput }
 }
 
 export function changeFurnitureDimension(
