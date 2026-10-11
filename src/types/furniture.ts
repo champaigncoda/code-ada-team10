@@ -58,4 +58,6 @@ export interface FurnitureInstance {
     readonly z: number
   }
   readonly rotationY: number
+  /** Shown instead of the automatic "Sofa 1" label. Omitted when the user has not named it. */
+  readonly customName?: string
 }

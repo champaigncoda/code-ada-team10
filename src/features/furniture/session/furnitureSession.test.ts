@@ -179,6 +179,79 @@ describe('furniture editing and management', () => {
   })
 })
 
+describe('custom furniture names', () => {
+  it('falls back to the automatic name when no custom name is set', () => {
+    const session = placed('sofa-1')
+    expect(session.instances[0]?.customName).toBeUndefined()
+    expect(furnitureDisplayName(session.instances, 'sofa-1')).toBe('Sofa 1')
+  })
+
+  it('trims a name, clears a blank one, and keeps the previous name past 40 characters', () => {
+    const named = apply(placed('sofa-1'), { type: 'furnitureNameChanged', input: '  Reading nook  ' })
+    expect(named.instances[0]?.customName).toBe('Reading nook')
+    expect(furnitureDisplayName(named.instances, 'sofa-1')).toBe('Reading nook')
+
+    const cleared = apply(named, { type: 'furnitureNameChanged', input: '   ' })
+    expect(cleared.instances[0]?.customName).toBeUndefined()
+    expect(furnitureDisplayName(cleared.instances, 'sofa-1')).toBe('Sofa 1')
+
+    const tooLong = 'a'.repeat(41)
+    const rejected = apply(named, { type: 'furnitureNameChanged', input: tooLong })
+    expect(rejected.instances[0]?.customName).toBe('Reading nook')
+    expect(rejected.mode).toMatchObject({ kind: 'edit', draft: { nameInput: tooLong } })
+
+    const max = apply(named, { type: 'furnitureNameChanged', input: 'b'.repeat(40) })
+    expect(max.instances[0]?.customName).toBe('b'.repeat(40))
+  })
+
+  it('renames in edit mode without changing placement, size, rotation, or color', () => {
+    const session = placed('sofa-1')
+    const before = session.instances[0]
+    const renamed = apply(session, { type: 'furnitureNameChanged', input: 'Window seat' })
+    const after = renamed.instances[0]
+    expect(after?.customName).toBe('Window seat')
+    expect(after?.position).toEqual(before?.position)
+    expect(after?.dimensions).toEqual(before?.dimensions)
+    expect(after?.rotationY).toBe(before?.rotationY)
+    expect(after?.color).toBe(before?.color)
+    expect(after?.category).toBe(before?.category)
+
+    const recolored = apply(renamed, { type: 'furnitureColorChanged', color: '#8b9099' })
+    expect(recolored.instances[0]?.customName).toBe('Window seat')
+    expect(recolored.instances[0]?.color).toBe('#8b9099')
+    expect(recolored.instances[0]?.position).toEqual(before?.position)
+  })
+
+  it('copies a custom name with a (copy) suffix and leaves an unnamed copy automatic', () => {
+    const named = apply(placed('sofa-1'), { type: 'furnitureNameChanged', input: 'Lamp' })
+    const copied = apply(named, { type: 'furnitureDuplicated', id: 'sofa-2' })
+    expect(copied.instances[1]?.customName).toBe('Lamp (copy)')
+    expect(furnitureDisplayName(copied.instances, 'sofa-1')).toBe('Lamp')
+    expect(furnitureDisplayName(copied.instances, 'sofa-2')).toBe('Lamp (copy)')
+    expect(copied.instances[0]?.position).toEqual(named.instances[0]?.position)
+
+    const longNamed = apply(placed('sofa-1'), { type: 'furnitureNameChanged', input: 'd'.repeat(40) })
+    const longCopy = apply(longNamed, { type: 'furnitureDuplicated', id: 'sofa-2' })
+    expect(longCopy.instances[1]?.customName).toHaveLength(40)
+    expect(longCopy.instances[1]?.customName?.endsWith(' (copy)')).toBe(true)
+
+    const plain = apply(placed('sofa-1'), { type: 'furnitureDuplicated', id: 'sofa-2' })
+    expect(plain.instances[1]?.customName).toBeUndefined()
+    expect(furnitureDisplayName(plain.instances, 'sofa-1')).toBe('Sofa 1')
+    expect(furnitureDisplayName(plain.instances, 'sofa-2')).toBe('Sofa 2')
+  })
+
+  it('keeps a typed name when the category changes while creating', () => {
+    const session = apply(
+      initialFurnitureSession(),
+      { type: 'furnitureCreateStarted' },
+      { type: 'furnitureNameChanged', input: 'Guest bed' },
+      { type: 'furnitureCategoryChanged', category: 'bed' },
+    )
+    expect(session.mode).toMatchObject({ kind: 'create', draft: { category: 'bed', nameInput: 'Guest bed' } })
+  })
+})
+
 describe('transform editing', () => {
   it('moves and rotates only the targeted instance and keeps the other still', () => {
     const session = apply(placed('sofa-1'), {

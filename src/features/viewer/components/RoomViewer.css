@@ -184,6 +184,17 @@
   gap: 0.75rem;
 }
 
+.furniture-name__row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.furniture-name__row .length-input {
+  flex: 1;
+  min-width: 0;
+}
+
 .furniture-details__place,
 .furniture-details__delete {
   width: 100%;
