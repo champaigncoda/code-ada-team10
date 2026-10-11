@@ -1,9 +1,9 @@
 import { useCallback } from 'react'
-import type { ThreeEvent } from '@react-three/fiber'
 import type { FloorPoint, RoomGeometry } from '../../../types/room'
 import { createFurnitureId } from '../../furniture/furnitureConfig'
 import type { FurnitureSession, FurnitureSessionAction } from '../../furniture/session/furnitureSession'
 import { orbitControlsEnabled } from '../../furniture/session/furnitureSession'
+import { FurnitureGestureController } from './FurnitureGestureController'
 import { GroundGrid } from './GroundGrid'
 import { PlacementController } from './PlacementController'
 import { RoomCameraRig } from './RoomCameraRig'
@@ -14,11 +14,12 @@ interface RoomSceneProps {
   readonly geometry: RoomGeometry
   readonly showWalls: boolean
   readonly resetToken: number
+  readonly topToken: number
   readonly session: FurnitureSession
   readonly onAction: (action: FurnitureSessionAction) => void
 }
 
-export function RoomScene({ geometry, showWalls, resetToken, session, onAction }: RoomSceneProps) {
+export function RoomScene({ geometry, showWalls, resetToken, topToken, session, onAction }: RoomSceneProps) {
   const { bounds, heightMeters, footprint } = geometry
   const placing = session.mode.kind === 'placement'
   const onPreview = useCallback((position: FloorPoint | null) => {
@@ -27,19 +28,13 @@ export function RoomScene({ geometry, showWalls, resetToken, session, onAction }
   const onAttempt = useCallback((position: FloorPoint, inside: boolean) => {
     onAction({ type: 'furniturePlacementAttempted', position, inside, id: createFurnitureId() })
   }, [onAction])
-  const onEmpty = (event: ThreeEvent<MouseEvent>) => {
-    event.stopPropagation()
-    onAction({ type: 'furnitureDeselected' })
-  }
   return (
     <>
       <color attach="background" args={['#e8eaef']} />
       <ambientLight intensity={0.62} />
       <directionalLight position={[10, 14, 6]} intensity={1.05} />
       <directionalLight position={[-7, 6, -5]} intensity={0.28} />
-      <group onClick={onEmpty}>
-        <RoomMeshes geometry={geometry} showWalls={showWalls} />
-      </group>
+      <RoomMeshes geometry={geometry} showWalls={showWalls} />
       <RoomFurnitureLayer session={session} onSelect={(id) => onAction({ type: 'furnitureSelected', id })} />
       <GroundGrid width={bounds.width} depth={bounds.depth} />
       <PlacementController
@@ -48,9 +43,19 @@ export function RoomScene({ geometry, showWalls, resetToken, session, onAction }
         onPreview={onPreview}
         onAttempt={onAttempt}
       />
+      <FurnitureGestureController
+        placing={placing}
+        instances={session.instances}
+        onSelect={(id) => onAction({ type: 'furnitureSelected', id })}
+        onMove={(id, x, z) => onAction({ type: 'furnitureMoved', id, x, z })}
+        onRotate={(id, rotationY) => onAction({ type: 'furnitureRotated', id, rotationY })}
+        onEmptyClick={() => onAction({ type: 'furnitureDeselected' })}
+      />
       <RoomCameraRig
         extent={{ width: bounds.width, depth: bounds.depth, height: heightMeters }}
+        floorBounds={bounds}
         resetToken={resetToken}
+        topToken={topToken}
         enabled={orbitControlsEnabled(session)}
       />
     </>

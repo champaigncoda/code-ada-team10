@@ -17,6 +17,7 @@ function ViewerChrome() {
         showWalls={showWalls}
         onToggleWalls={() => setShowWalls((visible) => !visible)}
         onResetCamera={() => {}}
+        onTopView={() => {}}
         onReturnToEditor={() => {}}
       />
       <output data-testid="walls-visible">{String(showWalls)}</output>

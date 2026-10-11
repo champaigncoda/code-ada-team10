@@ -5,6 +5,7 @@ import { FurnitureConfigFields } from '../../furniture/components/FurnitureConfi
 import { FurniturePreviewCanvas } from '../../furniture/components/FurniturePreviewCanvas'
 import { createFurnitureId, parseFurnitureDraft } from '../../furniture/furnitureConfig'
 import { buildFurnitureLayout } from '../../furniture/layout/buildFurnitureLayout'
+import { ROTATION_SHORTCUTS_DEGREES } from '../../furniture/interaction/transformMath'
 import {
   PLACEMENT_INSTRUCTION,
   furnitureDisplayName,
@@ -129,6 +130,60 @@ function EditDetails({
         onDimensionChange={(axis, input) => onAction({ type: 'furnitureDimensionChanged', axis, input })}
         onColorChange={(color) => onAction({ type: 'furnitureColorChanged', color })}
       />
+      <fieldset className="furniture-transform">
+        <legend>Transform</legend>
+        <label className="furniture-field">
+          <span className="furniture-field__label">Position X</span>
+          <span className="length-input">
+            <input
+              type="text"
+              inputMode="decimal"
+              aria-label="Position X"
+              value={session.mode.transform.xInput}
+              onChange={(event) => onAction({ type: 'furniturePositionDraftChanged', axis: 'x', input: event.target.value })}
+            />
+            <span className="length-input__unit">m</span>
+          </span>
+        </label>
+        <label className="furniture-field">
+          <span className="furniture-field__label">Position Z</span>
+          <span className="length-input">
+            <input
+              type="text"
+              inputMode="decimal"
+              aria-label="Position Z"
+              value={session.mode.transform.zInput}
+              onChange={(event) => onAction({ type: 'furniturePositionDraftChanged', axis: 'z', input: event.target.value })}
+            />
+            <span className="length-input__unit">m</span>
+          </span>
+        </label>
+        <label className="furniture-field">
+          <span className="furniture-field__label">Rotation</span>
+          <span className="length-input">
+            <input
+              type="text"
+              inputMode="decimal"
+              aria-label="Rotation"
+              value={session.mode.transform.rotationInput}
+              onChange={(event) => onAction({ type: 'furnitureRotationDraftChanged', input: event.target.value })}
+            />
+            <span className="length-input__unit">°</span>
+          </span>
+        </label>
+        <div className="furniture-transform__shortcuts" role="group" aria-label="Rotation shortcuts">
+          {ROTATION_SHORTCUTS_DEGREES.map((degrees) => (
+            <button
+              key={degrees}
+              type="button"
+              className="button button--secondary button--small"
+              onClick={() => onAction({ type: 'furnitureRotationShortcut', degrees })}
+            >
+              {degrees}°
+            </button>
+          ))}
+        </div>
+      </fieldset>
       <div className="furniture-details__actions">
         <button
           type="button"

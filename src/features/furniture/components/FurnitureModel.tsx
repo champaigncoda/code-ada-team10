@@ -1,4 +1,5 @@
 import { RoundedBox } from '@react-three/drei'
+import { Mesh } from 'three'
 import type { FurnitureLayout, FurniturePart } from '../../../types/furniture'
 import { colorForRole, furniturePalette } from '../color'
 
@@ -9,20 +10,34 @@ interface FurnitureModelProps {
   readonly highlighted?: boolean
   /** Placement ghost. Excluded from pointer hit testing. */
   readonly ghost?: boolean
+  /** Placed models ignore hits while a new item is being placed. */
+  readonly interactive?: boolean
 }
 
 function ignoreRaycast(): void {}
+
+/**
+ * Placement sets `raycast` to a no-op. Passing `undefined` afterwards does not
+ * restore it — React Three Fiber skips undefined props — so every model that
+ * lived through a later placement would stay unhittable. Only the instance
+ * created after that placement would still use the default mesh raycast.
+ */
+function activeRaycast(this: Mesh, ...args: Parameters<Mesh['raycast']>): ReturnType<Mesh['raycast']> {
+  return Mesh.prototype.raycast.apply(this, args)
+}
 
 function PartMesh({
   part,
   color,
   highlighted = false,
   ghost = false,
+  interactive = true,
 }: {
   readonly part: FurniturePart
   readonly color: string
   readonly highlighted?: boolean
   readonly ghost?: boolean
+  readonly interactive?: boolean
 }) {
   const roughness = part.role === 'accent' ? 0.82 : part.role === 'secondary' ? 0.7 : 0.58
   return (
@@ -34,7 +49,7 @@ function PartMesh({
       position={[part.center.x, part.center.y, part.center.z]}
       castShadow={!ghost}
       receiveShadow={!ghost}
-      raycast={ghost ? ignoreRaycast : undefined}
+      raycast={ghost || !interactive ? ignoreRaycast : activeRaycast}
     >
       <meshStandardMaterial
         color={color}
@@ -51,7 +66,13 @@ function PartMesh({
 }
 
 /** Renders a layout. Color never affects part sizes — only materials. */
-export function FurnitureModel({ layout, color, highlighted = false, ghost = false }: FurnitureModelProps) {
+export function FurnitureModel({
+  layout,
+  color,
+  highlighted = false,
+  ghost = false,
+  interactive = true,
+}: FurnitureModelProps) {
   const palette = furniturePalette(color)
   return (
     <group name={`furniture-${layout.category}`}>
@@ -62,6 +83,7 @@ export function FurnitureModel({ layout, color, highlighted = false, ghost = fal
           color={colorForRole(palette, part.role)}
           highlighted={highlighted}
           ghost={ghost}
+          interactive={interactive}
         />
       ))}
     </group>

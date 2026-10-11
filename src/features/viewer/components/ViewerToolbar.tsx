@@ -2,6 +2,7 @@ interface ViewerToolbarProps {
   readonly showWalls: boolean
   readonly onToggleWalls: () => void
   readonly onResetCamera: () => void
+  readonly onTopView: () => void
   readonly onReturnToEditor: () => void
 }
 
@@ -9,6 +10,7 @@ export function ViewerToolbar({
   showWalls,
   onToggleWalls,
   onResetCamera,
+  onTopView,
   onReturnToEditor,
 }: ViewerToolbarProps) {
   return (
@@ -26,6 +28,9 @@ export function ViewerToolbar({
           onClick={onToggleWalls}
         >
           {showWalls ? 'Hide Walls' : 'Show Walls'}
+        </button>
+        <button type="button" className="button button--secondary" onClick={onTopView}>
+          Top View
         </button>
         <button type="button" className="button button--secondary" onClick={onResetCamera}>
           Reset Camera

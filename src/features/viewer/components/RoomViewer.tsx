@@ -22,6 +22,7 @@ interface RoomViewerProps {
 export function RoomViewer({ source, session, onAction, onReturnToEditor }: RoomViewerProps) {
   const [showWalls, setShowWalls] = useState(true)
   const [resetToken, setResetToken] = useState(0)
+  const [topToken, setTopToken] = useState(0)
   const geometry = useMemo(() => buildRoomGeometry(source), [source])
   const placing = session.mode.kind === 'placement'
 
@@ -43,6 +44,7 @@ export function RoomViewer({ source, session, onAction, onReturnToEditor }: Room
           showWalls={showWalls}
           onToggleWalls={() => setShowWalls((visible) => !visible)}
           onResetCamera={() => setResetToken((token) => token + 1)}
+          onTopView={() => setTopToken((token) => token + 1)}
           onReturnToEditor={onReturnToEditor}
         />
         <p className="room-viewer__error" role="alert">
@@ -63,6 +65,7 @@ export function RoomViewer({ source, session, onAction, onReturnToEditor }: Room
         showWalls={showWalls}
         onToggleWalls={() => setShowWalls((visible) => !visible)}
         onResetCamera={() => setResetToken((token) => token + 1)}
+        onTopView={() => setTopToken((token) => token + 1)}
         onReturnToEditor={onReturnToEditor}
       />
       <div className="room-viewer__columns">
@@ -78,12 +81,12 @@ export function RoomViewer({ source, session, onAction, onReturnToEditor }: Room
               camera={{ fov: VIEWER_FOV_DEGREES, near: 0.05, far: 200, position: [6, 6, 6] }}
               gl={{ antialias: true }}
               style={{ background: VIEWER_BACKGROUND }}
-              onPointerMissed={() => onAction({ type: 'furnitureDeselected' })}
             >
               <RoomScene
                 geometry={geometry}
                 showWalls={showWalls}
                 resetToken={resetToken}
+                topToken={topToken}
                 session={session}
                 onAction={onAction}
               />

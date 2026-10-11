@@ -4,7 +4,8 @@ import type { FurnitureInstance } from '../../../types/furniture'
 import { FurnitureModel } from '../../furniture/components/FurnitureModel'
 import { parseFurnitureDraft } from '../../furniture/furnitureConfig'
 import { buildFurnitureLayout } from '../../furniture/layout/buildFurnitureLayout'
-import type { FurnitureSession } from '../../furniture/session/furnitureSession'
+import { rotationHandleVisible, type FurnitureSession } from '../../furniture/session/furnitureSession'
+import { RotationHandle } from './RotationHandle'
 
 interface RoomFurnitureLayerProps {
   readonly session: FurnitureSession
@@ -33,6 +34,10 @@ export function RoomFurnitureLayer({ session, onSelect }: RoomFurnitureLayerProp
           onSelect={onSelect}
         />
       ))}
+      {rotationHandleVisible(mode) &&
+        session.instances
+          .filter((item) => item.id === selectedId)
+          .map((item) => <RotationHandle key={item.id} instance={item} />)}
       {mode.kind === 'placement' && mode.preview && previewLayout && (
         <group name="placement-preview" position={[mode.preview.x, 0, mode.preview.z]}>
           <FurnitureModel layout={previewLayout} color={mode.draft.color} ghost />
@@ -53,15 +58,10 @@ function PlacedFurniture({
   readonly selectable: boolean
   readonly onSelect: (id: string) => void
 }) {
+  const { id, category, dimensions, color } = instance
   const layout = useMemo(
-    () =>
-      buildFurnitureLayout({
-        id: instance.id,
-        category: instance.category,
-        dimensions: instance.dimensions,
-        color: instance.color,
-      }),
-    [instance],
+    () => buildFurnitureLayout({ id, category, dimensions, color }),
+    [id, category, dimensions, color],
   )
   if (!layout) return null
   const select = (event: ThreeEvent<MouseEvent>) => {
@@ -73,9 +73,10 @@ function PlacedFurniture({
       name={`placed-${instance.id}`}
       position={[instance.position.x, 0, instance.position.z]}
       rotation={[0, instance.rotationY, 0]}
+      userData={{ furniturePart: 'body', furnitureId: instance.id }}
       onClick={selectable ? select : undefined}
     >
-      <FurnitureModel layout={layout} color={instance.color} highlighted={highlighted} />
+      <FurnitureModel layout={layout} color={instance.color} highlighted={highlighted} interactive={selectable} />
     </group>
   )
 }
