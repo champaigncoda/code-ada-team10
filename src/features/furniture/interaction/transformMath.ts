@@ -24,6 +24,22 @@ export function cameraLocked(claim: GestureClaim): boolean {
   return claim === 'drag' || claim === 'rotate' || claim === 'placement'
 }
 
+/**
+ * Selection after the primary button is released.
+ * A furniture press keeps that instance selected. An empty click clears it.
+ * An empty drag is a camera gesture and must leave the selection alone.
+ */
+export function selectionAfterPrimaryRelease(input: {
+  readonly downTarget: 'rotate' | 'body' | 'empty'
+  readonly dragged: boolean
+  readonly downId: string | null
+  readonly selectedId: string | null
+}): string | null {
+  if (input.downTarget === 'body' || input.downTarget === 'rotate') return input.downId
+  if (input.dragged) return input.selectedId
+  return null
+}
+
 export function pointerTravelPx(startX: number, startY: number, x: number, y: number): number {
   return Math.hypot(x - startX, y - startY)
 }

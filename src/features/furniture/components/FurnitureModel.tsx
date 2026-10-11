@@ -1,4 +1,5 @@
 import { RoundedBox } from '@react-three/drei'
+import { Mesh } from 'three'
 import type { FurnitureLayout, FurniturePart } from '../../../types/furniture'
 import { colorForRole, furniturePalette } from '../color'
 
@@ -14,6 +15,16 @@ interface FurnitureModelProps {
 }
 
 function ignoreRaycast(): void {}
+
+/**
+ * Placement sets `raycast` to a no-op. Passing `undefined` afterwards does not
+ * restore it — React Three Fiber skips undefined props — so every model that
+ * lived through a later placement would stay unhittable. Only the instance
+ * created after that placement would still use the default mesh raycast.
+ */
+function activeRaycast(this: Mesh, ...args: Parameters<Mesh['raycast']>): ReturnType<Mesh['raycast']> {
+  return Mesh.prototype.raycast.apply(this, args)
+}
 
 function PartMesh({
   part,
@@ -38,7 +49,7 @@ function PartMesh({
       position={[part.center.x, part.center.y, part.center.z]}
       castShadow={!ghost}
       receiveShadow={!ghost}
-      raycast={ghost || !interactive ? ignoreRaycast : undefined}
+      raycast={ghost || !interactive ? ignoreRaycast : activeRaycast}
     >
       <meshStandardMaterial
         color={color}

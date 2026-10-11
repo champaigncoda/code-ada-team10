@@ -9,6 +9,7 @@ import {
   beginDrag,
   beginRotate,
   classifyPointerDown,
+  passedDragThreshold,
   type DragGesture,
   type RotateGesture,
 } from '../../furniture/interaction/transformMath'
@@ -20,6 +21,7 @@ interface FurnitureGestureControllerProps {
   readonly onSelect: (id: string) => void
   readonly onMove: (id: string, x: number, z: number) => void
   readonly onRotate: (id: string, rotationY: number) => void
+  readonly onEmptyClick: () => void
 }
 
 type LiveGesture =
@@ -36,6 +38,7 @@ export function FurnitureGestureController({
   onSelect,
   onMove,
   onRotate,
+  onEmptyClick,
 }: FurnitureGestureControllerProps) {
   const camera = useThree((state) => state.camera)
   const gl = useThree((state) => state.gl)
@@ -46,6 +49,7 @@ export function FurnitureGestureController({
   const selectRef = useRef(onSelect)
   const moveRef = useRef(onMove)
   const rotateRef = useRef(onRotate)
+  const emptyClickRef = useRef(onEmptyClick)
 
   useEffect(() => {
     placingRef.current = placing
@@ -53,6 +57,7 @@ export function FurnitureGestureController({
     selectRef.current = onSelect
     moveRef.current = onMove
     rotateRef.current = onRotate
+    emptyClickRef.current = onEmptyClick
   })
 
   useEffect(() => {
@@ -60,6 +65,7 @@ export function FurnitureGestureController({
     const raycaster = new Raycaster()
     const pointer = new Vector2()
     let gesture: LiveGesture | null = null
+    let emptyPress: { readonly pointerId: number; readonly x: number; readonly y: number } | null = null
 
     const restoreOrbit = () => {
       const orbit = controls as { enabled?: boolean } | null
@@ -88,22 +94,29 @@ export function FurnitureGestureController({
         { x: direction.x, y: direction.y, z: direction.z },
       )
     }
-    const targetOf = (event: PointerEvent): 'rotate' | 'body' | 'empty' => {
+    const aim = (event: PointerEvent) => {
       const rect = element.getBoundingClientRect()
-      if (rect.width <= 0 || rect.height <= 0) return 'empty'
+      if (rect.width <= 0 || rect.height <= 0) return false
       pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
       pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
       raycaster.setFromCamera(pointer, camera)
+      return true
+    }
+    const closestFurniture = (event: PointerEvent): { readonly part: 'rotate' | 'body'; readonly id: string } | null => {
+      if (!aim(event)) return null
       const hits = raycaster.intersectObjects(scene.children, true)
       for (const hit of hits) {
         let object: Object3D | null = hit.object
         while (object) {
           const part = object.userData.furniturePart
-          if (part === 'rotate' || part === 'body') return part
+          const furnitureId = object.userData.furnitureId
+          if ((part === 'rotate' || part === 'body') && typeof furnitureId === 'string') {
+            return { part, id: furnitureId }
+          }
           object = object.parent
         }
       }
-      return 'empty'
+      return null
     }
     const finish = (pointerId: number | null) => {
       if (pointerId !== null) releaseCapture(pointerId)
@@ -113,12 +126,21 @@ export function FurnitureGestureController({
 
     const onDown = (event: PointerEvent) => {
       if (placingRef.current) return
-      const claim = classifyPointerDown({ button: event.button, placing: false, target: targetOf(event) })
-      if (claim !== 'drag' && claim !== 'rotate') return
-      const id = idFromRay(event)
-      const instance = instancesRef.current.find((item) => item.id === id)
+      if (event.button !== 0) return
+      const furniture = closestFurniture(event)
+      const claim = classifyPointerDown({
+        button: event.button,
+        placing: false,
+        target: furniture?.part ?? 'empty',
+      })
+      if (claim !== 'drag' && claim !== 'rotate') {
+        emptyPress = { pointerId: event.pointerId, x: event.clientX, y: event.clientY }
+        return
+      }
+      const instance = instancesRef.current.find((item) => item.id === furniture?.id)
       const hit = floorHit(event)
-      if (!instance || !hit || !id) return
+      if (!instance || !hit || !furniture) return
+      emptyPress = null
       event.preventDefault()
       event.stopImmediatePropagation()
       try {
@@ -143,22 +165,6 @@ export function FurnitureGestureController({
           drag: beginDrag(instance.id, event.clientX, event.clientY, instance.position, hit),
         }
       }
-    }
-    const idFromRay = (event: PointerEvent): string | null => {
-      const rect = element.getBoundingClientRect()
-      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
-      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
-      raycaster.setFromCamera(pointer, camera)
-      const hits = raycaster.intersectObjects(scene.children, true)
-      for (const hit of hits) {
-        let object: Object3D | null = hit.object
-        while (object) {
-          const furnitureId = object.userData.furnitureId
-          if (typeof furnitureId === 'string') return furnitureId
-          object = object.parent
-        }
-      }
-      return null
     }
     const onMove = (event: PointerEvent) => {
       if (!gesture || gesture.pointerId !== event.pointerId) return
@@ -190,10 +196,16 @@ export function FurnitureGestureController({
       }
     }
     const onUp = (event: PointerEvent) => {
-      if (!gesture || gesture.pointerId !== event.pointerId) return
-      event.preventDefault()
-      event.stopImmediatePropagation()
-      finish(event.pointerId)
+      if (gesture && gesture.pointerId === event.pointerId) {
+        event.preventDefault()
+        event.stopImmediatePropagation()
+        finish(event.pointerId)
+        return
+      }
+      if (!emptyPress || emptyPress.pointerId !== event.pointerId) return
+      const dragged = passedDragThreshold(emptyPress.x, emptyPress.y, event.clientX, event.clientY)
+      emptyPress = null
+      if (!dragged) emptyClickRef.current()
     }
 
     element.addEventListener('pointerdown', onDown, true)

@@ -15,6 +15,7 @@ import {
   positionFromGrab,
   radiansToDegrees,
   rotationFromPointer,
+  selectionAfterPrimaryRelease,
   signedAngleDelta,
 } from './transformMath'
 
@@ -38,6 +39,29 @@ describe('pointer ownership', () => {
   it('treats a short press as a click', () => {
     expect(passedDragThreshold(10, 10, 10 + DRAG_THRESHOLD_PX - 1, 10)).toBe(false)
     expect(passedDragThreshold(10, 10, 10 + DRAG_THRESHOLD_PX, 10)).toBe(true)
+  })
+})
+
+describe('selection persistence', () => {
+  it('keeps the furniture that was pressed, including when it was already selected', () => {
+    expect(
+      selectionAfterPrimaryRelease({ downTarget: 'body', dragged: false, downId: 'sofa-a', selectedId: null }),
+    ).toBe('sofa-a')
+    expect(
+      selectionAfterPrimaryRelease({ downTarget: 'body', dragged: true, downId: 'bed-c', selectedId: 'bed-c' }),
+    ).toBe('bed-c')
+    expect(
+      selectionAfterPrimaryRelease({ downTarget: 'rotate', dragged: true, downId: 'table-b', selectedId: 'table-b' }),
+    ).toBe('table-b')
+  })
+
+  it('clears selection only for an empty click, not an empty camera drag', () => {
+    expect(
+      selectionAfterPrimaryRelease({ downTarget: 'empty', dragged: false, downId: null, selectedId: 'sofa-a' }),
+    ).toBeNull()
+    expect(
+      selectionAfterPrimaryRelease({ downTarget: 'empty', dragged: true, downId: null, selectedId: 'sofa-a' }),
+    ).toBe('sofa-a')
   })
 })
 

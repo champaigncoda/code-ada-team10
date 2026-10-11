@@ -81,7 +81,6 @@ export function RoomViewer({ source, session, onAction, onReturnToEditor }: Room
               camera={{ fov: VIEWER_FOV_DEGREES, near: 0.05, far: 200, position: [6, 6, 6] }}
               gl={{ antialias: true }}
               style={{ background: VIEWER_BACKGROUND }}
-              onPointerMissed={() => onAction({ type: 'furnitureDeselected' })}
             >
               <RoomScene
                 geometry={geometry}
