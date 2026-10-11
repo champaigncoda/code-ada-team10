@@ -1,13 +1,15 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { useReducer } from 'react'
+import { useReducer, useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { RoomAppearance } from '../../../types/room'
 import {
   initialFurnitureSession,
   reduceFurnitureSession,
   type FurnitureSession,
   type FurnitureSessionAction,
 } from '../../furniture/session/furnitureSession'
+import { DEFAULT_ROOM_APPEARANCE, changeRoomColor } from '../../room/appearance'
 import { roomSource, RECTANGLE_PX } from '../testFixtures'
 import { RoomViewer } from './RoomViewer'
 
@@ -32,11 +34,14 @@ function placed(id: string, x: number, z: number, session = initialFurnitureSess
 
 function Harness({ initial }: { readonly initial: FurnitureSession }) {
   const [session, dispatch] = useReducer(reduceFurnitureSession, initial)
+  const [appearance, setAppearance] = useState<RoomAppearance>(DEFAULT_ROOM_APPEARANCE)
   return (
     <RoomViewer
       source={roomSource(RECTANGLE_PX, 2.8)}
       session={session}
+      appearance={appearance}
       onAction={dispatch}
+      onRoomColorChange={(surface, color) => setAppearance((current) => changeRoomColor(current, surface, color))}
       onReturnToEditor={() => undefined}
     />
   )
@@ -46,6 +51,7 @@ describe('spatial warnings in the viewer', () => {
   it('shows no warnings for a sofa inside the room, then updates as it is moved out and back', () => {
     render(<Harness initial={placed('sofa-1', 0, 0)} />)
     expect(screen.getByRole('heading', { name: 'Spatial Warnings' })).toBeTruthy()
+    expect(screen.queryByRole('region', { name: 'Room colors' })).toBeNull()
     expect(screen.getByText('No spatial warnings.')).toBeTruthy()
     expect(screen.queryByRole('img', { name: 'Out of bounds' })).toBeNull()
 
@@ -81,5 +87,18 @@ describe('spatial warnings in the viewer', () => {
     fireEvent.click(screen.getByRole('button', { name: /Sofa 1/ }))
     expect(screen.queryByRole('heading', { name: 'Furniture Overlap' })).toBeNull()
     expect(screen.getByRole('heading', { name: 'Out of Bounds' })).toBeTruthy()
+  })
+
+  it('shows room colors again after the last item is deleted and keeps the chosen color', () => {
+    render(<Harness initial={placed('sofa-1', 1.8, 0)} />)
+    expect(screen.getByRole('heading', { name: 'Out of Bounds' })).toBeTruthy()
+    expect(screen.queryByRole('region', { name: 'Room colors' })).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    expect(screen.queryByRole('heading', { name: 'Spatial Warnings' })).toBeNull()
+    expect(screen.getByRole('region', { name: 'Room colors' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Walls: Dusty Blue' }))
+    expect(screen.getByRole('button', { name: 'Walls: Dusty Blue' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('button', { name: 'Floor: Slate' }).getAttribute('aria-pressed')).toBe('true')
   })
 })

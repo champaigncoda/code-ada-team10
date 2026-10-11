@@ -39,6 +39,18 @@ export interface RoomWall {
   readonly inwardNormal: FloorPoint
 }
 
+/** The two room surfaces whose color the user can change. */
+export type RoomSurface = 'floor' | 'wall'
+
+/** `#rrggbb` hex color, always stored lowercase. */
+export type RoomColor = string
+
+/** How the generated room is painted. Purely visual: it never affects geometry. */
+export interface RoomAppearance {
+  readonly floorColor: RoomColor
+  readonly wallColor: RoomColor
+}
+
 export interface FloorBounds {
   readonly minX: number
   readonly maxX: number

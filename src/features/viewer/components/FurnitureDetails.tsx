@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { formatMeters } from '../../calibration/scale'
 import { FURNITURE_CATEGORY_LABELS } from '../../furniture/catalog'
 import { FurnitureConfigFields } from '../../furniture/components/FurnitureConfigPanel'
@@ -26,10 +26,12 @@ interface FurnitureDetailsProps {
   readonly session: FurnitureSession
   readonly room: RoomSummary | null
   readonly validation: SpatialValidation
+  /** Room-level settings (such as colors) shown while no furniture is selected. */
+  readonly roomControls?: ReactNode
   readonly onAction: (action: FurnitureSessionAction) => void
 }
 
-export function FurnitureDetails({ session, room, validation, onAction }: FurnitureDetailsProps) {
+export function FurnitureDetails({ session, room, validation, roomControls, onAction }: FurnitureDetailsProps) {
   const { mode } = session
   const draft = mode.kind === 'default' ? null : mode.draft
   const layout = useMemo(() => {
@@ -52,6 +54,7 @@ export function FurnitureDetails({ session, room, validation, onAction }: Furnit
               </p>
             )}
             <p>Select a furniture item or add a new one.</p>
+            {roomControls}
           </>
         )}
         {mode.kind === 'create' && draft && (

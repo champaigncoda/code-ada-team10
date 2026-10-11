@@ -1,16 +1,19 @@
 import { useMemo } from 'react'
 import { DoubleSide } from 'three'
-import type { RoomGeometry } from '../../../types/room'
+import type { RoomAppearance, RoomGeometry } from '../../../types/room'
 import { createFloorBufferGeometry, createWallsBufferGeometry } from '../geometry/meshGeometry'
-import { FLOOR_COLOR, WALL_COLOR } from '../materials'
 
 interface RoomMeshesProps {
   readonly geometry: RoomGeometry
   readonly showWalls: boolean
+  readonly appearance: RoomAppearance
 }
 
-/** Floor and walls as two meshes. Hiding walls only flips `visible`; the geometry stays mounted. */
-export function RoomMeshes({ geometry, showWalls }: RoomMeshesProps) {
+/**
+ * Floor and walls as two meshes. Hiding walls only flips `visible`, and a new
+ * color only updates the material; the geometry stays mounted either way.
+ */
+export function RoomMeshes({ geometry, showWalls, appearance }: RoomMeshesProps) {
   const floor = useMemo(
     () => createFloorBufferGeometry(geometry.footprint, geometry.floorTriangles),
     [geometry.footprint, geometry.floorTriangles],
@@ -20,10 +23,10 @@ export function RoomMeshes({ geometry, showWalls }: RoomMeshesProps) {
   return (
     <group name="room-meshes">
       <mesh name="room-floor" geometry={floor}>
-        <meshStandardMaterial color={FLOOR_COLOR} roughness={0.9} metalness={0} side={DoubleSide} />
+        <meshStandardMaterial color={appearance.floorColor} roughness={0.9} metalness={0} side={DoubleSide} />
       </mesh>
       <mesh name="room-walls" geometry={walls} visible={showWalls}>
-        <meshStandardMaterial color={WALL_COLOR} roughness={0.72} metalness={0} side={DoubleSide} />
+        <meshStandardMaterial color={appearance.wallColor} roughness={0.72} metalness={0} side={DoubleSide} />
       </mesh>
     </group>
   )

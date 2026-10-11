@@ -2,6 +2,7 @@ import { isPointInImage } from '../../geometry/imageBounds'
 import { pointsCoincide } from '../../geometry/point'
 import { validatePolygon } from '../../geometry/polygonValidation'
 import type { Point2D, RoomPolygon } from '../../types/geometry'
+import type { RoomAppearance, RoomSurface } from '../../types/room'
 import {
   type CalibrationState,
   changeReferenceLength,
@@ -18,6 +19,7 @@ import {
   type FurnitureSession,
   type FurnitureSessionAction,
 } from '../furniture/session/furnitureSession'
+import { DEFAULT_ROOM_APPEARANCE, changeRoomColor } from '../room/appearance'
 import { DEFAULT_ROOM_HEIGHT_INPUT, parseRoomHeight } from '../room/roomHeight'
 import { MIN_POLYGON_VERTICES } from './constants'
 import { selectRoomModelSource } from './editorSelectors'
@@ -48,6 +50,8 @@ export interface EditorState {
    * Cleared when the outline or calibration changes. Wall-height edits keep it.
    */
   readonly furnitureSession: FurnitureSession
+  /** Floor and wall colors. A visual preference, so it survives outline and image changes. */
+  readonly roomAppearance: RoomAppearance
 }
 
 export type EditorView = 'editor' | 'viewer'
@@ -64,6 +68,7 @@ export type EditorAction =
   | { readonly type: 'recalibrationStarted' }
   | { readonly type: 'roomHeightChanged'; readonly input: string }
   | { readonly type: 'roomGenerated' }
+  | { readonly type: 'roomColorChanged'; readonly surface: RoomSurface; readonly color: string }
   | { readonly type: 'editorReturned' }
   | { readonly type: 'errorRaised'; readonly error: EditorError }
   | { readonly type: 'errorDismissed' }
@@ -79,6 +84,7 @@ export const initialEditorState: EditorState = {
   activeView: 'editor',
   error: null,
   furnitureSession: initialFurnitureSession(),
+  roomAppearance: DEFAULT_ROOM_APPEARANCE,
 }
 
 function withCalibration(state: EditorState, calibration: CalibrationState): EditorState {
@@ -145,7 +151,12 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
   switch (action.type) {
     case 'floorPlanLoaded':
       // The height describes the room being modeled, not the image, so it survives a replacement.
-      return { ...initialEditorState, floorPlan: action.floorPlan, roomHeightInput: state.roomHeightInput }
+      return {
+        ...initialEditorState,
+        floorPlan: action.floorPlan,
+        roomHeightInput: state.roomHeightInput,
+        roomAppearance: state.roomAppearance,
+      }
     case 'canvasClicked':
       return handleCanvasClick(state, action.point, action.isNearFirstVertex)
     case 'lastVertexRemoved':
@@ -193,6 +204,10 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
     }
     case 'roomGenerated':
       return generateRoom(state)
+    case 'roomColorChanged': {
+      const roomAppearance = changeRoomColor(state.roomAppearance, action.surface, action.color)
+      return roomAppearance === state.roomAppearance ? state : { ...state, roomAppearance }
+    }
     case 'editorReturned':
       if (state.activeView === 'editor') return state
       return { ...state, activeView: 'editor', furnitureSession: interruptFurniturePlacement(state.furnitureSession) }
