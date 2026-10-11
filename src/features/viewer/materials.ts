@@ -1,5 +1,3 @@
 export const VIEWER_BACKGROUND = '#d9dde4'
-export const FLOOR_COLOR = '#6d7583'
-export const WALL_COLOR = '#f7f3eb'
 export const GRID_CENTER_COLOR = '#8b93a1'
 export const GRID_LINE_COLOR = '#c2c7d0'

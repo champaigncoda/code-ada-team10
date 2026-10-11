@@ -1,0 +1,76 @@
+.room-colors {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.room-colors__title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.room-colors__group {
+  margin: 0;
+  padding: 0;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.room-colors__group legend {
+  padding: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.room-colors__swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.room-colors__swatch {
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 2px solid var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.room-colors__swatch:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.room-colors__swatch--selected {
+  border-color: #ffffff;
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.room-colors__custom {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.room-colors__custom input[type='color'] {
+  width: 2rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.room-colors__value {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}

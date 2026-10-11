@@ -1,5 +1,6 @@
 import { useCallback, useReducer, useRef } from 'react'
 import type { Point2D } from '../../types/geometry'
+import type { RoomSurface } from '../../types/room'
 import type { FurnitureSessionAction } from '../furniture/session/furnitureSession'
 import { editorReducer, initialEditorState } from './editorReducer'
 import { loadFloorPlanImage } from './loadFloorPlanImage'
@@ -39,6 +40,7 @@ export function useFloorPlanEditor() {
     startRecalibration: () => dispatch({ type: 'recalibrationStarted' }),
     changeRoomHeight: (input: string) => dispatch({ type: 'roomHeightChanged', input }),
     generateRoom: () => dispatch({ type: 'roomGenerated' }),
+    changeRoomColor: (surface: RoomSurface, color: string) => dispatch({ type: 'roomColorChanged', surface, color }),
     returnToEditor: () => dispatch({ type: 'editorReturned' }),
     dismissError: () => dispatch({ type: 'errorDismissed' }),
   }

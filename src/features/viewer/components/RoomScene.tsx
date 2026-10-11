@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import type { FloorPoint, RoomGeometry } from '../../../types/room'
+import type { FloorPoint, RoomAppearance, RoomGeometry } from '../../../types/room'
 import { createFurnitureId } from '../../furniture/furnitureConfig'
 import type { FurnitureSession, FurnitureSessionAction } from '../../furniture/session/furnitureSession'
 import { orbitControlsEnabled } from '../../furniture/session/furnitureSession'
@@ -13,13 +13,14 @@ import { RoomMeshes } from './RoomMeshes'
 interface RoomSceneProps {
   readonly geometry: RoomGeometry
   readonly showWalls: boolean
+  readonly appearance: RoomAppearance
   readonly resetToken: number
   readonly topToken: number
   readonly session: FurnitureSession
   readonly onAction: (action: FurnitureSessionAction) => void
 }
 
-export function RoomScene({ geometry, showWalls, resetToken, topToken, session, onAction }: RoomSceneProps) {
+export function RoomScene({ geometry, showWalls, appearance, resetToken, topToken, session, onAction }: RoomSceneProps) {
   const { bounds, heightMeters, footprint } = geometry
   const placing = session.mode.kind === 'placement'
   const onPreview = useCallback((position: FloorPoint | null) => {
@@ -34,7 +35,7 @@ export function RoomScene({ geometry, showWalls, resetToken, topToken, session, 
       <ambientLight intensity={0.62} />
       <directionalLight position={[10, 14, 6]} intensity={1.05} />
       <directionalLight position={[-7, 6, -5]} intensity={0.28} />
-      <RoomMeshes geometry={geometry} showWalls={showWalls} />
+      <RoomMeshes geometry={geometry} showWalls={showWalls} appearance={appearance} />
       <RoomFurnitureLayer session={session} onSelect={(id) => onAction({ type: 'furnitureSelected', id })} />
       <GroundGrid width={bounds.width} depth={bounds.depth} />
       <PlacementController
